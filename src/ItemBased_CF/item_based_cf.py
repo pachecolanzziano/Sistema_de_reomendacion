@@ -11,15 +11,16 @@ import random
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-from ft_engineering import get_train_test
+from Sistema_de_reomendacion.src.ItemBased_CF.ft_engineering import get_train_test
 
 K = 10
 
 
-def recommend(customer_code, train_matrix, item_similarity, k=K):
+def recommend(customer_code, train_matrix, item_similarity, k=K, exclude_seen=True):
     bought = train_matrix[customer_code].toarray().ravel()
     scores = bought @ item_similarity
-    scores[bought.nonzero()] = -np.inf  # no recomendar lo que ya compró
+    if exclude_seen:
+        scores[bought.nonzero()] = -np.inf  # no recomendar lo que ya compró
     top = np.argpartition(scores, -k)[-k:]
     return top[np.argsort(-scores[top])]
 
@@ -36,22 +37,24 @@ def main():
 
     actuals = test_df.groupby("customer_code")["item_code"].apply(set)
 
-    precisions = []
+    precisions = {True: [], False: []}
     example_customer_code, example_recs = None, None
     for customer_code, actual_items in actuals.items():
         if customer_code >= train_matrix.shape[0]:
             continue  # cliente que no aparece en train
         if train_matrix[customer_code].nnz == 0:
             continue  # cliente sin historial en train, no se puede recomendar
-        recs = recommend(customer_code, train_matrix, item_similarity)
-        p = precision_at_k(recs, actual_items)
-        if p is not None:
-            precisions.append(p)
-        if example_customer_code is None and random.random() < 0.05:
-            example_customer_code, example_recs = customer_code, recs
+        for exclude_seen in (True, False):
+            recs = recommend(customer_code, train_matrix, item_similarity, exclude_seen=exclude_seen)
+            p = precision_at_k(recs, actual_items)
+            if p is not None:
+                precisions[exclude_seen].append(p)
+            if exclude_seen and example_customer_code is None and random.random() < 0.05:
+                example_customer_code, example_recs = customer_code, recs
 
-    print(f"Precision@{K} promedio: {np.mean(precisions):.4f}")
-    print(f"Clientes evaluados: {len(precisions)}")
+    print(f"Precision@{K} excluyendo recompras:  {np.mean(precisions[True]):.4f}")
+    print(f"Precision@{K} permitiendo recompras: {np.mean(precisions[False]):.4f}")
+    print(f"Clientes evaluados: {len(precisions[True])}")
 
     if example_customer_code is not None:
         names = [description_map.get(item_map[i], item_map[i]) for i in example_recs]
