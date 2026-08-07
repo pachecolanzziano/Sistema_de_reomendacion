@@ -10,7 +10,7 @@ import pandas as pd
 from scipy.sparse import csr_matrix
 
 
-def load_and_split(path="DataSetLimpio.csv", test_size=0.2):
+def load_and_split(path="./DataSetLimpio.csv", test_size=0.2):
     # Country y Description quedan fuera del modelado a propósito:
     # Country porque >90% es "United Kingdom" (sesgaría el modelo sin aportar),
     # Description porque no es una variable de interacción cliente-item.

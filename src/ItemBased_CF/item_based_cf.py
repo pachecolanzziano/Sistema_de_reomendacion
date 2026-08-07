@@ -11,7 +11,7 @@ import random
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-from Sistema_de_reomendacion.src.ItemBased_CF.ft_engineering import get_train_test
+from ft_engineering import get_train_test
 
 K = 10
 
