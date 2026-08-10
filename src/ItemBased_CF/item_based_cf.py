@@ -31,13 +31,35 @@ def precision_at_k(recommended, actual, k=K):
     return len(set(recommended[:k]) & actual) / k
 
 
+def recall_at_k(recommended, actual, k=K):
+    if not actual:
+        return None
+    return len(set(recommended[:k]) & actual) / len(actual)
+
+
+def average_precision_at_k(recommended, actual, k=K):
+    if not actual:
+        return None
+    hits = 0
+    sum_precisions = 0.0
+    for i, item in enumerate(recommended[:k], start=1):
+        if item in actual:
+            hits += 1
+            sum_precisions += hits / i
+    return sum_precisions / min(len(actual), k)
+
+
 def main():
     train_matrix, test_df, customer_map, item_map, description_map = get_train_test()
     item_similarity = cosine_similarity(train_matrix.T, dense_output=True)
+    n_items = train_matrix.shape[1]
 
     actuals = test_df.groupby("customer_code")["item_code"].apply(set)
 
-    precisions = {True: [], False: []}
+    metrics = {
+        exclude_seen: {"precision": [], "recall": [], "ap": [], "recommended_items": set()}
+        for exclude_seen in (True, False)
+    }
     example_customer_code, example_recs = None, None
     for customer_code, actual_items in actuals.items():
         if customer_code >= train_matrix.shape[0]:
@@ -46,15 +68,26 @@ def main():
             continue  # cliente sin historial en train, no se puede recomendar
         for exclude_seen in (True, False):
             recs = recommend(customer_code, train_matrix, item_similarity, exclude_seen=exclude_seen)
+            m = metrics[exclude_seen]
             p = precision_at_k(recs, actual_items)
             if p is not None:
-                precisions[exclude_seen].append(p)
+                m["precision"].append(p)
+                m["recall"].append(recall_at_k(recs, actual_items))
+                m["ap"].append(average_precision_at_k(recs, actual_items))
+            m["recommended_items"].update(recs)
             if exclude_seen and example_customer_code is None and random.random() < 0.05:
                 example_customer_code, example_recs = customer_code, recs
 
-    print(f"Precision@{K} excluyendo recompras:  {np.mean(precisions[True]):.4f}")
-    print(f"Precision@{K} permitiendo recompras: {np.mean(precisions[False]):.4f}")
-    print(f"Clientes evaluados: {len(precisions[True])}")
+    for exclude_seen, label in ((True, "excluyendo recompras"), (False, "permitiendo recompras")):
+        m = metrics[exclude_seen]
+        coverage = len(m["recommended_items"]) / n_items
+        print(f"--- {label} ---")
+        print(f"Precision@{K}: {np.mean(m['precision']):.4f}")
+        print(f"Recall@{K}:    {np.mean(m['recall']):.4f}")
+        print(f"MAP@{K}:       {np.mean(m['ap']):.4f}")
+        print(f"Coverage@{K}:  {coverage:.4f}")
+
+    print(f"Clientes evaluados: {len(metrics[True]['precision'])}")
 
     if example_customer_code is not None:
         names = [description_map.get(item_map[i], item_map[i]) for i in example_recs]

@@ -6,11 +6,15 @@ cliente-item con un split temporal 80/20: el 20% de test corresponde
 siempre a las compras más recientes del dataset (no es un split aleatorio).
 """
 
+import os
+
 import pandas as pd
 from scipy.sparse import csr_matrix
 
+DEFAULT_CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DataSetLimpio.csv")
 
-def load_and_split(path="./DataSetLimpio.csv", test_size=0.2):
+
+def load_and_split(path=DEFAULT_CSV_PATH, test_size=0.2):
     # Country y Description quedan fuera del modelado a propósito:
     # Country porque >90% es "United Kingdom" (sesgaría el modelo sin aportar),
     # Description porque no es una variable de interacción cliente-item.
@@ -56,7 +60,7 @@ def build_interaction_matrix(df, n_customers, n_items):
     )
 
 
-def get_train_test(path="DataSetLimpio.csv", test_size=0.2):
+def get_train_test(path=DEFAULT_CSV_PATH, test_size=0.2):
     """Punto de entrada que usan los scripts de modelos (item_based_cf.py, etc.).
 
     Devuelve:
