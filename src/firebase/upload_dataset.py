@@ -1,112 +1,92 @@
 from pathlib import Path
 from datetime import datetime, timezone
-
+import pandas as pd
 from firebase_config import get_firestore_client
-
 
 # ---------------------------------------------------------
 # Configuración
 # ---------------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
 CSV_PATH = PROJECT_ROOT / "src" / "DataSetLimpio.csv"
-
-COLLECTION_NAME = "datasets"
-DOCUMENT_ID = "retail_dataset"
-
-# Límite interno de seguridad.
-# Firestore permite documentos de hasta 1 MiB.
-MAX_CSV_SIZE = 900 * 1024
-
+COLLECTION_NAME = "transacciones"  # Nombre de la colección donde irán los documentos
+BATCH_SIZE = 500  # Máximo de operaciones por lote
 
 # ---------------------------------------------------------
 # Función principal
 # ---------------------------------------------------------
 
-def upload_dataset():
+def upload_dataset_in_batches():
     """
-    Lee DataSetLimpio.csv y lo almacena como un único
-    documento dentro de Firestore.
+    Lee DataSetLimpio.csv por partes (chunks) y sube cada fila
+    como un documento individual a Firestore, en lotes de BATCH_SIZE.
     """
-
-    # -----------------------------------------------------
-    # 1. Verificar que exista el CSV
-    # -----------------------------------------------------
-
+    # 1. Verificar que el CSV exista
     if not CSV_PATH.exists():
-        raise FileNotFoundError(
-            f"No se encontró el archivo CSV: {CSV_PATH}"
-        )
+        raise FileNotFoundError(f"No se encontró el archivo CSV: {CSV_PATH}")
+    print(f"📁 CSV encontrado: {CSV_PATH}")
 
-    print(f"CSV encontrado: {CSV_PATH}")
-
-    # -----------------------------------------------------
-    # 2. Leer el CSV como texto
-    # -----------------------------------------------------
-
-    csv_text = CSV_PATH.read_text(
-        encoding="utf-8"
-    )
-
-    # -----------------------------------------------------
-    # 3. Calcular tamaño
-    # -----------------------------------------------------
-
-    csv_size = len(csv_text.encode("utf-8"))
-
-    print(f"Tamaño del CSV: {csv_size / 1024:.2f} KB")
-
-    if csv_size > MAX_CSV_SIZE:
-        raise ValueError(
-            "El CSV es demasiado grande para nuestra estrategia "
-            "de almacenar todo el contenido en un único documento "
-            f"de Firestore.\n"
-            f"Tamaño: {csv_size / 1024:.2f} KB\n"
-            f"Límite interno: {MAX_CSV_SIZE / 1024:.2f} KB"
-        )
-
-    # -----------------------------------------------------
-    # 4. Obtener conexión
-    # -----------------------------------------------------
-
+    # 2. Conectar a Firestore
     db = get_firestore_client()
+    print("🔌 Conectado a Firestore.")
 
-    # -----------------------------------------------------
-    # 5. Crear referencia al documento
-    # -----------------------------------------------------
+    # 3. Leer el CSV por partes (chunks) para ahorrar memoria
+    total_rows = 0
+    total_batches = 0
+    chunk_size = 10000  # Número de filas por chunk
 
-    document_ref = (
-        db.collection(COLLECTION_NAME)
-        .document(DOCUMENT_ID)
-    )
+    print("📤 Iniciando carga por lotes...")
+    for chunk in pd.read_csv(CSV_PATH, chunksize=chunk_size):
+        batch = db.batch()
+        batch_count = 0
 
-    # -----------------------------------------------------
-    # 6. Construir documento
-    # -----------------------------------------------------
+        for _, row in chunk.iterrows():
+            # Convertir la fila a diccionario
+            doc_data = row.to_dict()
+            
+            # Crear un nuevo documento con ID automático
+            doc_ref = db.collection(COLLECTION_NAME).document()
+            batch.set(doc_ref, doc_data)
+            
+            batch_count += 1
+            total_rows += 1
 
-    data = {
-        "filename": CSV_PATH.name,
-        "csv_data": csv_text,
-        "size_bytes": csv_size,
+            # Si llegamos al límite del lote, lo ejecutamos
+            if batch_count >= BATCH_SIZE:
+                batch.commit()
+                total_batches += 1
+                print(f"✅ Lote {total_batches} subido ({total_rows} registros hasta ahora)")
+                
+                # Empezar un nuevo lote
+                batch = db.batch()
+                batch_count = 0
+
+        # Subir el último lote del chunk (si quedaron operaciones pendientes)
+        if batch_count > 0:
+            batch.commit()
+            total_batches += 1
+            print(f"✅ Lote {total_batches} subido ({total_rows} registros hasta ahora)")
+
+    print("\n🎉 ¡Carga completada!")
+    print(f"📊 Total de registros: {total_rows}")
+    print(f"📂 Colección: {COLLECTION_NAME}")
+    print(f"📦 Total de lotes: {total_batches}")
+
+    # 4. Guardar metadatos de la carga en otro documento (opcional)
+    metadata_ref = db.collection("_metadata").document("dataset_info")
+    metadata_ref.set({
+        "collection_name": COLLECTION_NAME,
+        "total_records": total_rows,
         "uploaded_at": datetime.now(timezone.utc),
-    }
-
-    # -----------------------------------------------------
-    # 7. Guardar documento
-    # -----------------------------------------------------
-
-    document_ref.set(data)
-
-    print()
-    print("Dataset cargado correctamente.")
-    print(f"Colección: {COLLECTION_NAME}")
-    print(f"Documento: {DOCUMENT_ID}")
-
+        "source_file": CSV_PATH.name,
+        "batch_size": BATCH_SIZE,
+        "total_batches": total_batches
+    })
+    print("📋 Metadatos guardados en _metadata/dataset_info")
 
 # ---------------------------------------------------------
 # Ejecución
 # ---------------------------------------------------------
 
 if __name__ == "__main__":
-    upload_dataset()
+    upload_dataset_in_batches()
