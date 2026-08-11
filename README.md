@@ -21,16 +21,19 @@
 9. [Estrategia de Recomendación](#-estrategia-de-recomendación)
 10. [Popularity Baseline](#-popularity-baseline)
 11. [Item-Based Collaborative Filtering](#-item-based-collaborative-filtering)
-12. [Evaluación](#-evaluación)
-13. [Limitaciones Técnicas](#-limitaciones-técnicas)
-14. [Tecnologías Utilizadas](#-tecnologías-utilizadas)
-15. [Estructura del Proyecto](#-estructura-del-proyecto)
-16. [Impacto y Viabilidad de Negocio](#-impacto-y-viabilidad-de-negocio)
-17. [Instalación](#-instalación)
-18. [Configuración del Entorno](#-configuración-del-entorno)
-19. [Ejecución del Proyecto](#-ejecución-del-proyecto)
-20. [Estado del Proyecto — Demo 1](#-estado-del-proyecto--demo-1)
-21. [Equipo](#-equipo)
+12. [ALS — Alternating Least Squares](#-als--alternating-least-squares)
+13. [FP-Growth](#-fp-growth)
+14. [Evaluación de Modelos](#-evaluación-de-modelos)
+15. [Interpretación de Resultados](#-interpretación-de-resultados)
+16. [Limitaciones Técnicas](#-limitaciones-técnicas)
+17. [Tecnologías Utilizadas](#-tecnologías-utilizadas)
+18. [Estructura del Proyecto](#-estructura-del-proyecto)
+19. [Impacto y Viabilidad de Negocio](#-impacto-y-viabilidad-de-negocio)
+20. [Instalación](#-instalación)
+21. [Configuración del Entorno](#-configuración-del-entorno)
+22. [Ejecución del Proyecto](#-ejecución-del-proyecto)
+23. [Estado del Proyecto — Demo 1](#-estado-del-proyecto--demo-1)
+24. [Equipo](#-equipo)
 
 ---
 
@@ -69,8 +72,10 @@ Desarrollar un sistema capaz de transformar el historial de compras en **recomen
 - Preparar una matriz de interacción Cliente × Producto.
 - Implementar un **Popularity Baseline** como referencia de comparación.
 - Implementar un modelo **Item-Based Collaborative Filtering**.
+- Implementar un modelo de factorización **ALS — Alternating Least Squares**.
+- Implementar **FP-Growth** 
 - Evaluar la capacidad de los modelos para recomendar productos relevantes.
-- Comparar el desempeño del modelo personalizado frente al baseline.
+- Comparar el desempeño de los diferentes enfoques de recomendación.
 - Establecer una base técnica para futuras etapas de integración y despliegue.
 
 ---
@@ -81,10 +86,8 @@ Los indicadores principales definidos para medir el impacto comercial de la solu
 
 | KPI | Objetivo |
 |---|---|
-| **KPI principal: Incremento del ticket promedio por cliente** | Medir el aumento del valor promedio de compra asociado a las recomendaciones. |
+| **KPI principal: Incremento del 15% en el ticket promedio** | Medir el aumento del valor promedio de compra asociado a las recomendaciones. |
 | **KPI secundario: Incremento en las ventas de productos recomendados** | Medir el crecimiento de las ventas correspondientes a productos sugeridos por el sistema. |
-
-> Estos KPIs corresponden a indicadores de negocio. La evaluación técnica del sistema se realiza mediante métricas de recomendación como **Precision@10**.
 
 ---
 
@@ -104,9 +107,7 @@ La empresa comercializa principalmente artículos de regalo y una parte importan
 
 El dataset original contiene aproximadamente **1.067.371 registros**.
 
-Después de las etapas de limpieza y preparación, la versión de trabajo considerada actualmente contiene:
-
-> **779.425 registros — valor pendiente de validación final con el equipo.**
+Después de las etapas de limpieza y preparación, la versión de trabajo considerada actualmente contiene: **805.243 registros.**
 
 ### Variables relevantes
 
@@ -176,7 +177,7 @@ El análisis permitió identificar una distribución desigual de las interaccion
 
 Estos hallazgos justifican la comparación entre un modelo basado en popularidad y un modelo personalizado basado en similitud entre productos.
 
-> **Nota de alcance Demo 1:** El análisis de **FP-Growth** no forma parte de la solución implementada y, por lo tanto, no se considera dentro del alcance actual del proyecto.
+> **Nota de alcance Demo 1:** FP-Growth se incorpora como enfoque complementario para Cross Selling y se evalúa de forma independiente debido a que trabaja a nivel de factura.
 
 ---
 
@@ -282,23 +283,24 @@ Estas limitaciones deberán considerarse durante la interpretación de resultado
 
 # 🤖 Estrategia de Recomendación
 
-A partir de los hallazgos del EDA y de la matriz de interacción Cliente × Producto, se implementaron dos enfoques complementarios:
+A partir de los hallazgos del EDA y de la matriz de interacción Cliente × Producto, se implementaron cuatro enfoques complementarios de recomendación:
 
 1. **Popularity Baseline**
 2. **Item-Based Collaborative Filtering**
+3. **ALS — Alternating Least Squares**
+4. **FP-Growth**
 
-El baseline permite establecer un punto de comparación objetivo, mientras que el modelo Item-Based busca incorporar personalización a partir de las relaciones entre productos.
+Los modelos permiten comparar estrategias basadas en popularidad, relaciones entre productos, preferencias latentes y asociaciones de compra.
 
 ## 📌 Alcance del Sistema
 
 | Elemento | Definición |
 |---|---|
-| **Tipo de recomendación** | Productos relacionados / complementarios |
-| **Entrada** | Historial transaccional Cliente × Producto |
+| **Tipo de recomendación** | Productos relevantes, relacionados o complementarios |
+| **Entrada** | Historial transaccional |
 | **Interacción** | Cantidad acumulada comprada |
-| **Salida** | Top 10 productos recomendados |
-| **Personalización** | Baseline: no / Item-Based: sí |
-| **Objetivo comercial** | Apoyar Cross Selling |
+| **Salida** | Top 10 recomendaciones |
+| **Objetivo comercial** | Apoyar estrategias de Cross Selling |
 
 ### Flujo general
 
@@ -309,239 +311,296 @@ Limpieza y preparación
           ↓
 Matriz Cliente × Producto
           ↓
-   ┌──────┴──────┐
-   ↓             ↓
-Popularity     Item-Based
-Baseline          CF
-   ↓             ↓
-   └──────┬──────┘
-          ↓
-       Top 10
-          ↓
-     Evaluación
-          ↓
-   Impacto de negocio
+   ┌──────┼──────────┬──────────┐
+   ↓      ↓          ↓          ↓
+Popularidad  Item-Based    ALS      FP-Growth
+   ↓          CF           ↓          ↓
+   └──────────┴──────────┴──────────┘
+                    ↓
+              Recomendaciones
+                    ↓
+                  Top 10
+                    ↓
+                Evaluación
 ```
 
 ---
 
 # 📈 Popularity Baseline
 
-El **Popularity Baseline** funciona como modelo de referencia.
+El **Popularity Baseline** funciona como modelo de referencia para comparar el desempeño de las estrategias personalizadas.
 
-Su estrategia consiste en recomendar a todos los clientes los mismos productos con mayor cantidad acumulada de unidades vendidas dentro del conjunto de entrenamiento.
+## ¿Qué hace?
 
-### Funcionamiento
+Recomienda los productos con mayor cantidad acumulada de unidades vendidas durante el conjunto de entrenamiento.
 
-1. Se utiliza únicamente el conjunto `Train`.
-2. Se calcula la cantidad total vendida por producto.
-3. Los productos se ordenan de mayor a menor cantidad.
-4. Se seleccionan los **Top 10 productos**.
-5. Los mismos productos se utilizan como recomendaciones para los clientes evaluados.
+## Funcionamiento
 
-Este enfoque **no es personalizado**.
+1. Utiliza únicamente el conjunto `Train`.
+2. Calcula la cantidad total vendida por producto.
+3. Ordena los productos de mayor a menor cantidad.
+4. Selecciona los **Top 10 productos**.
+5. Utiliza estos productos como recomendación para los clientes evaluados.
 
-Su propósito es establecer un punto de comparación:
+Este enfoque **no es personalizado** y permite establecer una referencia sencilla frente a los modelos personalizados.
 
-> Si el modelo personalizado no supera al baseline de popularidad, no estaría demostrando un valor adicional suficiente frente a una estrategia comercial mucho más sencilla.
-
-La implementación se encuentra en:
+### Implementación
 
 ```text
-src/ItemBased_CF/popularity_baseline.py
+src/Modelos/popularity_baseline.py
 ```
 
 ---
 
 # 🧠 Item-Based Collaborative Filtering
 
-El segundo enfoque implementado corresponde a un sistema de **Collaborative Filtering basado en ítems**.
+El **Item-Based Collaborative Filtering** recomienda productos relacionados con aquellos que el cliente ya ha comprado.
 
-En lugar de recomendar únicamente los productos más populares, el modelo utiliza las relaciones existentes entre los productos que los clientes han comprado.
+## ¿Qué hace?
 
-## Principio de funcionamiento
+Identifica relaciones entre productos a partir del comportamiento histórico de los clientes.
 
-El modelo parte de la matriz:
+## Funcionamiento
 
-**Cliente × Producto**
-
-y calcula la similitud entre productos utilizando **similitud coseno**.
+1. Parte de la matriz Cliente × Producto.
+2. Calcula la similitud entre productos mediante **similitud coseno**.
+3. Utiliza el historial de cada cliente.
+4. Genera candidatos relacionados con sus productos anteriores.
+5. Ordena los candidatos por puntuación.
+6. Selecciona el **Top 10**.
 
 ```text
 Matriz Cliente × Producto
           ↓
 Similitud entre productos
           ↓
-Productos relacionados
-          ↓
 Historial del cliente
           ↓
-Puntuación de candidatos
+Ranking de candidatos
           ↓
        Top 10
 ```
 
-La similitud entre ítems se obtiene utilizando `cosine_similarity` de `scikit-learn`.
+El modelo incorpora personalización porque las recomendaciones dependen del historial de compra de cada cliente.
 
-## Generación de recomendaciones
-
-Para un cliente determinado:
-
-1. Se identifica su historial de productos comprados.
-2. Se toman las similitudes de esos productos con el resto del catálogo.
-3. Se agregan las señales de similitud para obtener una puntuación por producto.
-4. Se ordenan los candidatos según su puntuación.
-5. Se seleccionan los **10 productos con mayor puntuación**.
-6. Se pueden excluir productos que el cliente ya compró.
-
-La implementación se encuentra en:
+### Implementación
 
 ```text
-src/ItemBased_CF/item_based_cf.py
+src/Modelos/item_based_cf.py
 ```
 
 ---
 
-## 🚫 Exclusión de Productos Ya Comprados
+# 🧮 ALS — Alternating Least Squares
 
-El sistema contempla dos escenarios:
+**ALS (Alternating Least Squares)** es un modelo de factorización matricial que busca identificar patrones de preferencia entre clientes y productos.
 
-| Escenario | Configuración | Descripción |
+## ¿Qué hace?
+
+Aprende representaciones latentes de clientes y productos a partir de las interacciones históricas y utiliza esas representaciones para generar recomendaciones.
+
+## Funcionamiento
+
+```text
+Matriz Cliente × Producto
+          ↓
+     Factores latentes
+          ↓
+Preferencias aprendidas
+          ↓
+Ranking de productos
+          ↓
+       Top 10
+```
+
+ALS trabaja con **feedback implícito**, utilizando las interacciones de compra registradas en el historial.
+
+### Implementación
+
+```text
+src/Modelos/als_model.py
+```
+
+---
+
+# 🛒 FP-Growth
+
+**FP-Growth** utiliza reglas de asociación para identificar productos que suelen aparecer juntos dentro de una misma factura.
+
+## ¿Qué hace?
+
+Permite identificar oportunidades de **Cross Selling** basadas en productos comprados conjuntamente.
+
+## Funcionamiento
+
+1. Agrupa los productos por factura.
+2. Identifica productos que aparecen juntos con frecuencia.
+3. Construye asociaciones entre productos.
+4. Genera recomendaciones relacionadas con un producto de referencia.
+
+```text
+Facturas
+   ↓
+Productos comprados juntos
+   ↓
+Patrones de co-ocurrencia
+   ↓
+Reglas de asociación
+   ↓
+Productos relacionados
+```
+
+A diferencia de los modelos cliente-producto, FP-Growth trabaja a nivel de **factura**.
+
+Por esta razón, su evaluación se realiza de forma independiente.
+
+### Implementación
+
+```text
+src/Modelos/Modelos_juntos.py
+```
+
+---
+
+# 📏 Evaluación de Modelos
+
+La evaluación busca determinar qué tan relevantes son las recomendaciones generadas por cada enfoque frente al comportamiento observado posteriormente en los datos de prueba.
+
+Se utiliza una separación temporal **80/20**:
+
+| Conjunto | Proporción | Característica |
+|---|---:|---|
+| `Train` | **80 %** | Transacciones más antiguas |
+| `Test` | **20 %** | Transacciones más recientes |
+
+Esto evita mezclar información futura con información histórica y permite evaluar el sistema de una forma más cercana a un escenario real.
+
+## Métricas utilizadas
+
+### Precision@10
+
+Mide qué proporción de los 10 productos recomendados aparece posteriormente entre las compras observadas en `Test`.
+
+**Pregunta que responde:**
+
+> ¿Qué tan acertadas son las recomendaciones?
+
+### Recall@10
+
+Mide qué proporción de los productos que el cliente compró posteriormente logró recuperar el Top 10 recomendado.
+
+**Pregunta que responde:**
+
+> ¿Qué parte del comportamiento posterior del cliente logramos cubrir?
+
+### MAP@10
+
+Evalúa la calidad del ranking considerando también la posición de los aciertos dentro del Top 10.
+
+**Pregunta que responde:**
+
+> ¿Los productos relevantes aparecen en las primeras posiciones?
+
+### Coverage@10
+
+Mide qué porcentaje del catálogo aparece al menos una vez entre las recomendaciones generadas.
+
+**Pregunta que responde:**
+
+> ¿El modelo recomienda una variedad amplia del catálogo?
+
+---
+
+## Resultados — Modelos evaluados sobre clientes
+
+Popularity Baseline, Item-Based CF y ALS se evaluaron sobre **2.285 clientes**.
+
+| Modelo | Precision@10 | Recall@10 | MAP@10 | Coverage@10 |
+|---|---:|---:|---:|---:|
+| **Popularity Baseline** | 0.0773 | 0.0243 | 0.0378 | 0.0022 |
+| **Item-Based CF** | 0.1162 | 0.0575 | 0.0827 | **0.3931** |
+| **ALS** | **0.1648** | **0.0814** | **0.1000** | 0.2762 |
+
+### Principales resultados
+
+**ALS presenta el mejor desempeño general en:**
+
+- Precision@10: **0.1648**
+- Recall@10: **0.0814**
+- MAP@10: **0.1000**
+
+**Item-Based CF presenta la mayor cobertura:**
+
+- Coverage@10: **39,31 %**
+- ALS: **27,62 %**
+
+Esto muestra que ALS obtiene mejores resultados en precisión y calidad del ranking, mientras que Item-Based CF ofrece una mayor diversidad de productos recomendados.
+
+---
+
+## Resultados — FP-Growth
+
+FP-Growth se evalúa de manera independiente porque su unidad de análisis es la **factura**.
+
+| Modelo | Precision@10 | Recall@10 | MAP@10 | Coverage@10 |
+|---|---:|---:|---:|---:|
+| **Popularity Baseline** | 0.0773 | 0.0243 | 0.0378 | 0.0022 |
+| **FP-Growth** | **0.1404** | **0.1042** | **0.1098** | **0.4583** |
+
+FP-Growth supera al baseline dentro de su comparación en las cuatro métricas.
+
+Además, alcanza una cobertura de **45,83 % del catálogo**.
+
+> **Importante:** los resultados de FP-Growth no deben compararse directamente con los resultados de ALS e Item-Based CF, debido a que FP-Growth utiliza una unidad de evaluación diferente: **5.710 facturas frente a 2.285 clientes**.
+
+---
+
+# 🎯 Interpretación de Resultados
+
+Los resultados permiten identificar diferentes fortalezas entre los modelos:
+
+| Modelo | Principal fortaleza | Enfoque |
 |---|---|---|
-| **Nuevos productos** | `exclude_seen=True` | Excluye productos que el cliente ya compró. |
-| **Recompras permitidas** | `exclude_seen=False` | Permite productos previamente adquiridos. |
+| **Popularity Baseline** | Referencia | Popularidad global |
+| **Item-Based CF** | Cobertura y explicabilidad | Relaciones entre productos |
+| **ALS** | Precisión y ranking | Preferencias aprendidas |
+| **FP-Growth** | Cross Selling y diversidad | Productos comprados conjuntamente |
 
-Para el objetivo principal de **Cross Selling**, el escenario de exclusión de productos previamente adquiridos resulta especialmente relevante porque busca identificar oportunidades adicionales de compra.
+### Resultado principal
 
----
+> **ALS presenta el mejor desempeño general entre los modelos evaluados sobre clientes, destacándose en Precision@10, Recall@10 y MAP@10.**
 
-# 📏 Evaluación
+### Resultado complementario
 
-La evaluación busca determinar si las recomendaciones generadas permiten recuperar productos que el cliente realmente compró posteriormente.
+> **Item-Based CF mantiene una ventaja en cobertura del catálogo y ofrece recomendaciones basadas en relaciones directas entre productos.**
 
-Se utiliza la separación temporal **80/20**, donde el 20 % más reciente corresponde al conjunto de prueba.
+### Aplicación de FP-Growth
 
-## Precision@10
-
-La métrica principal definida para la evaluación es:
-
-**Precision@10**
-
-Esta métrica mide qué proporción de los 10 productos recomendados corresponde a productos que aparecen posteriormente en el conjunto de prueba del cliente.
-
-Conceptualmente:
-
-```text
-Precision@10 =
-productos recomendados que aparecen en test
--------------------------------------------
-                  10
-```
-
-### Protocolo de evaluación
-
-```text
-                DATASET
-                   │
-                   ▼
-          Ordenamiento temporal
-                   │
-                   ▼
-             ┌─────────┐
-             │  TRAIN  │ 80 %
-             └────┬────┘
-                  │
-        Matriz Cliente × Producto
-                  │
-          ┌───────┴────────┐
-          ▼                ▼
-     Popularity        Item-Based
-      Baseline             CF
-          │                │
-          └───────┬────────┘
-                  ▼
-                Top 10
-                  │
-                  ▼
-          Comparación con Test
-                  │
-                  ▼
-             Precision@10
-```
-
-## Comparación de Modelos
-
-La tabla queda preparada para incorporar los resultados definitivos de la ejecución:
-
-| Modelo | Personalización | Top-K | Precision@10 | Estado |
-|---|---|---:|---:|---|
-| **Popularity Baseline** | ❌ No | 10 | **Pendiente** | Implementado |
-| **Item-Based CF** | ✅ Sí | 10 | **Pendiente** | Implementado |
-
-> **Nota:** Los valores de Precision@10 se incorporarán después de ejecutar ambos modelos sobre la versión definitiva y validada del dataset.
+> **FP-Growth aporta un enfoque complementario para Cross Selling, identificando productos que suelen comprarse conjuntamente dentro de una misma factura.**
 
 ---
 
-# 🧪 Interpretación de Resultados
+# ⚠️ Limitaciones Técnicas
 
-La comparación permitirá responder una pregunta central:
+### Sparsity
 
-> **¿El modelo personalizado logra recomendar productos relevantes mejor que una estrategia basada únicamente en popularidad?**
+La matriz Cliente × Producto puede presentar una alta dispersión debido a que cada cliente interactúa solamente con una pequeña proporción del catálogo disponible.
 
-### Si Item-Based CF supera al baseline
+Esto puede afectar la capacidad de encontrar relaciones entre productos con pocas interacciones.
 
-Esto indicaría que las relaciones entre productos aportan información adicional frente a recomendar únicamente los productos más vendidos.
+### Long Tail
 
-### Si el baseline supera al Item-Based CF
+El historial puede presentar una concentración importante de interacciones en productos populares y una cola larga de productos con menor frecuencia de compra.
 
-Esto indicaría que la personalización implementada todavía no genera suficiente valor predictivo y sería necesario revisar aspectos como:
+Esto puede favorecer productos populares y dificultar recomendaciones para productos con poca información histórica.
 
-- Sparsity.
-- Long Tail.
-- Cantidad de interacciones por cliente.
-- Cantidad de interacciones por producto.
-- Estrategia de scoring.
-- Tratamiento de clientes con poco historial.
+### Cold Start
 
----
+Un cliente sin historial suficiente no puede beneficiarse completamente de una estrategia basada en sus interacciones anteriores.
 
-# 🧩 Justificación del Enfoque
+De igual forma, un producto nuevo sin historial presenta dificultades para establecer similitudes con otros productos.
 
-## ¿Por qué utilizar un baseline?
-
-El baseline de popularidad proporciona una referencia sencilla, interpretable y reproducible.
-
-Permite determinar si el sistema desarrollado aporta valor adicional frente a una estrategia que solamente utiliza la frecuencia de compra.
-
-Además, evita evaluar el modelo personalizado de manera aislada.
-
-## ¿Por qué Item-Based Collaborative Filtering?
-
-El enfoque Item-Based resulta adecuado para este escenario porque el problema se basa en las relaciones existentes entre productos comprados por los clientes.
-
-El modelo utiliza directamente los patrones de interacción presentes en el historial transaccional para identificar productos relacionados.
-
-Esto permite:
-
-- Identificar productos relacionados.
-- Generar recomendaciones a partir del historial individual.
-- Personalizar el Top 10 para cada cliente.
-- Apoyar estrategias de Cross Selling.
-
----
-
-# ⚖️ Comparación de Enfoques
-
-| Aspecto | Popularity Baseline | Item-Based CF |
-|---|---|---|
-| Personalización | ❌ | ✅ |
-| Complejidad | Baja | Media |
-| Interpretabilidad | Alta | Media |
-| Utiliza historial individual | ❌ | ✅ |
-| Captura relaciones entre productos | ❌ | ✅ |
-| Sensibilidad a popularidad | Alta | Media/Alta |
-| Sensibilidad a sparsity | Baja | Mayor |
-
+Estas limitaciones deberán considerarse durante la interpretación de resultados y en futuras etapas del sistema.
 
 ---
 
@@ -553,37 +612,42 @@ Esto permite:
 | **Manipulación de datos** | Pandas, NumPy |
 | **Matriz dispersa** | SciPy |
 | **Machine Learning** | Scikit-Learn |
+| **Recomendación / Factorización** | Implicit |
+| **Reglas de asociación** | MLxtend |
 | **Similitud** | Cosine Similarity |
 | **EDA y visualización** | Jupyter Notebook, Matplotlib, Seaborn, Plotly |
 | **Control de versiones** | Git, GitHub |
 | **Despliegue previsto** | FastAPI / Streamlit |
 
-Las dependencias técnicas se encuentran documentadas en `requirements.txt`.
+Las dependencias del proyecto se encuentran documentadas en:
 
-> **Nota:** Algunas herramientas forman parte de la infraestructura prevista para etapas posteriores. En Demo 1 el foco está en EDA, preparación de datos y primera implementación de los modelos de recomendación.
+```text
+requirements.txt
+```
+
+> **Nota:** FastAPI y Streamlit corresponden a componentes previstos para etapas posteriores de integración y despliegue. En Demo 1 el foco se encuentra en EDA, preparación de datos, construcción de la matriz de interacción e implementación y evaluación de los modelos de recomendación.
 
 ---
 
 # 🗂️ Estructura del Proyecto
 
 ```text
-Sistema_de_recomendacion/
+Sistema_de_reomendacion/
 │
 ├── src/
+│   ├── Data/
+│   │   └── DataSetLimpio.csv
 │   │
-│   └── ItemBased_CF/
-│       │
-│       ├── __pycache__/
-│       ├── DataSetLimpio.csv
+│   └── Modelos/
+│       ├── als_model.py
 │       ├── ft_engineering.py
 │       ├── item_based_cf.py
-│       ├── popularity_baseline.py
-│       └── requirements.txt
+│       ├── Modelos_juntos.py
+│       └── popularity_baseline.py
 │
 ├── EDA_data_set.ipynb
-│
-├── main.py
-│
+├── requirements.txt
+├── .gitignore
 └── README.md
 ```
 
@@ -592,12 +656,13 @@ Sistema_de_recomendacion/
 | Archivo | Función |
 |---|---|
 | `EDA_data_set.ipynb` | Análisis exploratorio y diagnóstico de calidad de datos. |
-| `DataSetLimpio.csv` | Dataset preparado para las etapas de modelado. |
-| `ft_engineering.py` | Preprocesamiento, split temporal y construcción de la matriz Cliente × Producto. |
-| `item_based_cf.py` | Implementación del Item-Based Collaborative Filtering y evaluación. |
-| `popularity_baseline.py` | Implementación del baseline basado en popularidad. |
-| `requirements.txt` | Dependencias del proyecto. |
-| `main.py` | Punto de entrada reservado para la integración final. |
+| `src/Data/DataSetLimpio.csv` | Dataset limpio utilizado como base para las etapas de modelado. |
+| `src/Modelos/ft_engineering.py` | Preparación de interacciones, división temporal y construcción de la matriz Cliente × Producto. |
+| `src/Modelos/popularity_baseline.py` | Implementación del baseline basado en popularidad. |
+| `src/Modelos/item_based_cf.py` | Implementación del modelo Item-Based Collaborative Filtering. |
+| `src/Modelos/als_model.py` | Implementación del modelo ALS. |
+| `src/Modelos/Modelos_juntos.py` | Integración y evaluación conjunta de los diferentes enfoques de recomendación. |
+| `requirements.txt` | Dependencias necesarias para ejecutar el proyecto. |
 | `README.md` | Documentación general del proyecto. |
 
 ---
@@ -625,104 +690,65 @@ Sistema_de_recomendacion/
                         ▼
              Matriz Cliente × Producto
                         │
-              ┌─────────┴─────────┐
-              ▼                   ▼
-       Popularity Baseline    Item-Based CF
-              │                   │
-              └─────────┬─────────┘
+       ┌────────────────┼────────────────┐
+       ▼                ▼                ▼
+Popularity          Item-Based          ALS
+Baseline                CF               │
+       │                │                │
+       └────────────────┼────────────────┘
+                        ▼
+                 Recomendaciones
+                        │
                         ▼
                      Top 10
                         │
                         ▼
-                  Precision@10
+                    Evaluación
                         │
                         ▼
-               Comparación técnica
+                Selección / análisis
                         │
                         ▼
-                Impacto de negocio
+               Impacto de negocio
 ```
 
----
-
-# 💰 Impacto y Viabilidad de Negocio
-
-La solución busca generar valor mediante recomendaciones que puedan apoyar estrategias de **Cross Selling**, con impacto esperado principalmente sobre:
-
-- **Ticket promedio por cliente.**
-- **Ventas de productos recomendados.**
-
-La viabilidad económica se documentará mediante un escenario basado en:
-
-1. Inversión estimada del desarrollo.
-2. Ticket promedio del dataset.
-3. Porcentaje esperado de incremento asociado a las recomendaciones.
-4. Porcentaje de clientes/facturas impactadas.
-5. Beneficio económico estimado.
-6. ROI potencial.
-
-## Escenario económico — pendiente de validación
-
-| Variable | Valor | Estado |
-|---|---:|---|
-| Ticket promedio | **USD 476,43** | Disponible |
-| Incremento esperado | **5 %** | Hipótesis de escenario |
-| Facturas/clientes impactados | **Pendiente** | Por validar |
-| Beneficio estimado | **Pendiente** | Por calcular |
-| Inversión estimada | **USD 6.000** | Escenario de trabajo |
-| ROI | **Pendiente** | Por calcular |
-
-### Fórmula conceptual
+FP-Growth complementa este flujo trabajando a nivel de factura:
 
 ```text
-Beneficio estimado
-=
-Ticket promedio
-×
-Incremento esperado
-×
-Facturas impactadas
+Facturas
+   ↓
+Productos comprados conjuntamente
+   ↓
+FP-Growth
+   ↓
+Reglas de asociación
+   ↓
+Recomendaciones para Cross Selling
 ```
-
-```text
-ROI
-=
-(Beneficio estimado - Inversión)
---------------------------------
-          Inversión
-```
-
-> **Nota:** El escenario económico se considera preliminar y deberá validarse con los datos definitivos de los modelos y con los supuestos comerciales acordados por el equipo.
-
-> **Escenario conservador:** el ROI debe interpretarse como una estimación inicial y no como un resultado financiero garantizado. La adopción real de las recomendaciones y su conversión comercial deberán validarse mediante un piloto controlado.
-
----
 
 # ⚙️ Instalación
 
-Esta sección permite preparar el proyecto desde cero en un equipo nuevo y reproducir el entorno utilizado para el desarrollo.
+Esta sección permite preparar el proyecto desde cero en un equipo nuevo y reproducir el entorno utilizado durante el desarrollo.
 
 ## 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/pachecolanzziano/Sistema_de_recomendacion.git
+git clone https://github.com/pachecolanzziano/Sistema_de_reomendacion.git
 ```
 
 ## 2. Ingresar al proyecto
 
 ```bash
-cd Sistema_de_recomendacion
+cd Sistema_de_reomendacion
 ```
 
 ## 3. Verificar Python
-
-Se recomienda utilizar **Python 3.11 o superior**.
 
 ```bash
 python --version
 ```
 
-Si el comando anterior no funciona en Windows, puede utilizarse:
+En Windows también puede utilizarse:
 
 ```bash
 py --version
@@ -748,16 +774,16 @@ python3 -m venv venv
 
 ## 1. Activar el entorno virtual
 
-### Windows — CMD
-
-```bash
-venv\Scripts\activate
-```
-
 ### Windows — PowerShell
 
 ```powershell
 .\venv\Scripts\Activate.ps1
+```
+
+### Windows — CMD
+
+```bash
+venv\Scripts\activate
 ```
 
 ### Linux / macOS
@@ -765,8 +791,6 @@ venv\Scripts\activate
 ```bash
 source venv/bin/activate
 ```
-
-Una vez activado, el entorno virtual aparecerá normalmente al inicio de la terminal como `(venv)`.
 
 ## 2. Actualizar pip
 
@@ -776,19 +800,11 @@ python -m pip install --upgrade pip
 
 ## 3. Instalar dependencias
 
-Las dependencias utilizadas por el proyecto se encuentran actualmente en:
-
-```text
-src/ItemBased_CF/requirements.txt
-```
-
 Desde la raíz del proyecto:
 
 ```bash
-pip install -r src/ItemBased_CF/requirements.txt
+pip install -r requirements.txt
 ```
-
-Entre las principales dependencias se encuentran **Pandas, NumPy, SciPy, Scikit-Learn, Matplotlib, Seaborn, Plotly y Jupyter**. Las dependencias también contemplan herramientas previstas para etapas posteriores, como FastAPI, Uvicorn, Joblib y Streamlit.
 
 ## 4. Verificar la instalación
 
@@ -796,13 +812,13 @@ Entre las principales dependencias se encuentran **Pandas, NumPy, SciPy, Scikit-
 python -c "import pandas, numpy, scipy, sklearn; print('Entorno configurado correctamente')"
 ```
 
-> **Nota:** El proyecto utiliza un archivo de dependencias para facilitar la reproducibilidad del entorno entre los integrantes del equipo.
+> Las dependencias adicionales para recomendación y asociación se encuentran especificadas en `requirements.txt`.
 
 ---
 
 # ▶️ Ejecución del Proyecto
 
-En Demo 1, el proyecto puede ejecutarse en dos partes principales: **EDA** y **modelos de recomendación**.
+En Demo 1, el proyecto se divide principalmente en **EDA, preparación de datos y modelos de recomendación**.
 
 ## 1. Ejecutar el EDA
 
@@ -812,7 +828,7 @@ El análisis exploratorio se encuentra en:
 EDA_data_set.ipynb
 ```
 
-Desde la raíz del repositorio se puede iniciar Jupyter Notebook con:
+Para iniciar Jupyter:
 
 ```bash
 jupyter notebook
@@ -824,96 +840,55 @@ Posteriormente, abrir:
 EDA_data_set.ipynb
 ```
 
-El notebook documenta la exploración, diagnóstico de calidad y análisis inicial del dataset.
+## 2. Ejecutar los modelos
 
-## 2. Ejecutar los modelos de recomendación
-
-Los scripts de recomendación se encuentran en:
+Los modelos se encuentran en:
 
 ```text
-src/ItemBased_CF/
-```
-
-Es importante ejecutar los modelos desde esa carpeta porque los scripts utilizan el archivo `DataSetLimpio.csv` mediante una ruta relativa y comparten el módulo `ft_engineering.py`.
-
-```bash
-cd src/ItemBased_CF
+src/Modelos/
 ```
 
 ### Popularity Baseline
 
 ```bash
-python popularity_baseline.py
+python src/Modelos/popularity_baseline.py
 ```
-
-El script calcula el **Precision@10 promedio**, el número de clientes evaluados y muestra los 10 productos más populares utilizados como recomendación.
 
 ### Item-Based Collaborative Filtering
 
 ```bash
-python item_based_cf.py
+python src/Modelos/item_based_cf.py
 ```
 
-El script calcula:
+### ALS
 
-- Precision@10 excluyendo productos ya comprados.
-- Precision@10 permitiendo recompras.
-- Número de clientes evaluados.
-- Un ejemplo de recomendaciones generadas para un cliente.
+```bash
+python src/Modelos/als_model.py
+```
 
-La implementación utiliza la matriz de interacción Cliente × Producto y similitud coseno entre productos.
+### Modelos y evaluación conjunta
 
-## 3. Flujo de ejecución
+```bash
+python src/Modelos/Modelos_juntos.py
+```
+
+> **Nota:** `Modelos_juntos.py` integra los diferentes enfoques de recomendación y permite realizar la evaluación comparativa definida para Demo 1.
+
+## 3. Dataset utilizado
+
+El dataset limpio se encuentra en:
 
 ```text
-EDA_data_set.ipynb
-        ↓
-DataSetLimpio.csv
-        ↓
-ft_engineering.py
-        ↓
-Matriz Cliente × Producto
-        ↓
-   ┌────┴────┐
-   ↓         ↓
-Popularity  Item-Based CF
-Baseline
-   ↓         ↓
-   └────┬────┘
-        ↓
-   Precision@10
+src/Data/DataSetLimpio.csv
 ```
 
-## 4. Archivos necesarios para ejecutar los modelos
+La ejecución debe realizarse utilizando la estructura de carpetas actual del repositorio y la versión validada del dataset.
 
-La ejecución de los modelos requiere que el dataset limpio esté disponible en:
-
-```text
-src/ItemBased_CF/DataSetLimpio.csv
-```
-
-y que los siguientes archivos se encuentren en la misma carpeta:
-
-```text
-src/ItemBased_CF/
-├── DataSetLimpio.csv
-├── ft_engineering.py
-├── item_based_cf.py
-├── popularity_baseline.py
-└── requirements.txt
-```
-
-## 5. Punto de entrada `main.py`
+## 4. Punto de entrada `main.py`
 
 Durante Demo 1, `main.py` permanece reservado para la integración final de la solución.
 
-```text
-main.py
-```
-
-Actualmente no contiene la lógica principal de ejecución. La integración hacia este punto de entrada se realizará en una etapa posterior, una vez consolidados los modelos y el flujo final del sistema.
-
-> **Nota de reproducibilidad:** Para obtener resultados consistentes, debe utilizarse la misma versión validada de `DataSetLimpio.csv` y ejecutar el mismo protocolo temporal 80/20 definido en `ft_engineering.py`.
+Actualmente no contiene la lógica principal de ejecución del sistema. La integración hacia este punto de entrada se realizará en una etapa posterior.
 
 ---
 
@@ -930,28 +905,33 @@ Actualmente no contiene la lógica principal de ejecución. La integración haci
 - Construcción del dataset de trabajo.
 - Feature Engineering.
 - Construcción de la matriz Cliente × Producto.
-- División temporal Train/Test.
+- División temporal Train/Test 80/20.
 - Implementación del Popularity Baseline.
 - Implementación del Item-Based Collaborative Filtering.
-- Definición de Precision@10.
-- Preparación de la comparación entre modelos.
-- Documentación técnica inicial.
+- Implementación del modelo ALS.
+- Implementación de FP-Growth como enfoque de asociación para Cross Selling.
+- Integración de modelos mediante `Modelos_juntos.py`.
+- Evaluación mediante Precision@10, Recall@10, MAP@10 y Coverage@10.
+- Comparación de resultados.
+- Identificación de fortalezas y limitaciones de cada enfoque.
+- Preparación del escenario preliminar de impacto y viabilidad económica.
+- Documentación técnica inicial del proyecto.
 
 ### 🔄 Pendiente para las siguientes etapas
 
 - Validación definitiva del número de registros del dataset limpio.
-- Ejecución y validación final de las métricas.
-- Comparación definitiva de resultados.
+- Validación final de resultados y supuestos con el equipo.
 - Ajustes y optimización de los modelos.
-- Integración de la solución.
+- Integración completa de la solución.
+- Desarrollo de la API.
+- Desarrollo de la interfaz Streamlit.
 - Demo funcional.
-- Despliegue / API / interfaz según el alcance final.
-- Validación del impacto comercial.
-- Consolidación del escenario económico y ROI.
+- Despliegue según el alcance final.
+- Validación del impacto comercial mediante datos reales.
+- Consolidación definitiva del escenario económico y ROI.
+- Conclusiones finales y roadmap.
 
-> **Alcance Demo 1:** Esta entrega documenta y demuestra la comprensión del negocio, el análisis y preparación de datos y la primera implementación de la estrategia de recomendación. Las conclusiones definitivas, el roadmap y la solución final serán incorporados en la entrega final.
-
----
+> **Alcance Demo 1:** Esta entrega documenta y demuestra la comprensión del negocio, el análisis y preparación de datos y la implementación y evaluación inicial de los modelos de recomendación. Las conclusiones definitivas, el roadmap y la solución final serán incorporados en las siguientes etapas.
 
 # 👥 Equipo
 
