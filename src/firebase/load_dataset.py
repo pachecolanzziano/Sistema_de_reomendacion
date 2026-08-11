@@ -1,77 +1,63 @@
+# load_dataset.py (MODIFICADO)
 import pandas as pd
-from firebase_config import get_firestore_client
+import io
+from firebase_config import get_storage_client  # <-- CAMBIAR import
 
-# ---------------------------------------------------------
-# Configuración
-# ---------------------------------------------------------
-
-COLLECTION_NAME = "transacciones"  # Debe coincidir con el usado en upload_dataset.py
-
-# ---------------------------------------------------------
-# Función principal
-# ---------------------------------------------------------
+BLOB_PATH = "datasets/DataSetLimpio.csv"  # <-- Misma ruta que en upload
 
 def load_dataset():
-    """
-    Recupera TODOS los documentos de la colección especificada
-    y los devuelve como un pandas DataFrame.
-    """
-    db = get_firestore_client()
-    print("🔌 Conectado a Firestore.")
+    """Lee el CSV desde Cloud Storage y devuelve un DataFrame."""
+    # 1. Conectar a Cloud Storage
+    bucket = get_storage_client()
+    print("🔌 Conectado a Cloud Storage.")
 
-    # Obtener todos los documentos de la colección
-    docs = db.collection(COLLECTION_NAME).stream()
-    
-    data = []
-    doc_count = 0
-    
-    print(f"📥 Descargando documentos de la colección '{COLLECTION_NAME}'...")
-    for doc in docs:
-        doc_data = doc.to_dict()
-        data.append(doc_data)
-        doc_count += 1
-        
-        # Mostrar progreso cada 10,000 documentos
-        if doc_count % 10000 == 0:
-            print(f"   📄 {doc_count} documentos descargados...")
+    # 2. Verificar que el archivo existe
+    blob = bucket.blob(BLOB_PATH)
+    if not blob.exists():
+        raise FileNotFoundError(f"No se encontró el archivo en Cloud Storage: {BLOB_PATH}")
+    print(f"📁 Archivo encontrado: {BLOB_PATH}")
+    print(f"📏 Tamaño: {blob.size / (1024*1024):.2f} MB")
 
-    # Crear DataFrame
-    df = pd.DataFrame(data)
-    print(f"\n✅ Descarga completada: {len(df)} registros en el DataFrame.")
+    # 3. Descargar el archivo a memoria
+    print("📥 Descargando archivo...")
+    data = blob.download_as_text()
+    print("✅ Archivo descargado.")
+
+    # 4. Cargar en DataFrame
+    df = pd.read_csv(io.StringIO(data))
+    print(f"📊 DataFrame cargado: {len(df)} registros, {len(df.columns)} columnas")
     return df
 
-# ---------------------------------------------------------
-# Función para descargar solo una muestra (para pruebas)
-# ---------------------------------------------------------
+def load_dataset_sample(n_rows=1000):
+    """Lee solo las primeras N filas del CSV (para pruebas rápidas)."""
+    # 1. Conectar a Cloud Storage
+    bucket = get_storage_client()
+    blob = bucket.blob(BLOB_PATH)
+    if not blob.exists():
+        raise FileNotFoundError(f"No se encontró el archivo en Cloud Storage: {BLOB_PATH}")
 
-def load_dataset_sample(limit=1000):
-    """
-    Descarga solo una muestra de los primeros 'limit' documentos.
-    Útil para pruebas rápidas.
-    """
-    db = get_firestore_client()
-    docs = db.collection(COLLECTION_NAME).limit(limit).stream()
+    # 2. Descargar solo las primeras líneas
+    # (Esto es más eficiente que descargar todo el archivo)
+    import requests
+    url = f"https://storage.googleapis.com/{bucket.name}/{BLOB_PATH}"
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception(f"Error al descargar el archivo: {response.status_code}")
     
-    data = [doc.to_dict() for doc in docs]
-    df = pd.DataFrame(data)
-    print(f"📊 Muestra descargada: {len(df)} registros.")
+    # Leer solo las primeras n filas
+    from io import StringIO
+    lines = response.text.split('\n')
+    header = lines[0]
+    sample = header + '\n' + '\n'.join(lines[1:n_rows+1])
+    df = pd.read_csv(StringIO(sample))
+    print(f"📊 Muestra cargada: {len(df)} registros")
     return df
-
-# ---------------------------------------------------------
-# Ejecución
-# ---------------------------------------------------------
 
 if __name__ == "__main__":
-    # Para pruebas con todos los datos:
+    # Para pruebas completas:
     df = load_dataset()
-    
-    # Para pruebas rápidas con una muestra:
-    # df = load_dataset_sample(1000)
-    
-    print("\n📊 Información del DataFrame:")
-    print(f"Filas: {len(df)}")
-    print(f"Columnas: {len(df.columns)}")
-    print("\nColumnas:")
-    print(df.columns.tolist())
-    print("\nPrimeras 5 filas:")
     print(df.head())
+    
+    # O para pruebas rápidas:
+    # df = load_dataset_sample(1000)
+    # print(df.head())
