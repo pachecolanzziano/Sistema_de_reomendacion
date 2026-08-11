@@ -1,8 +1,4 @@
-# src/snowflake/upload_data.py
-"""
-Script para subir el CSV a Snowflake.
-"""
-
+# src/snowflake/upload_data.py (VERSIÓN CORREGIDA)
 import pandas as pd
 import snowflake.connector
 from snowflake.connector.pandas_tools import write_pandas
@@ -52,7 +48,8 @@ def upload_csv_to_snowflake(force=False):
     print(f"📊 Registros cargados: {len(df)}")
 
     # 5. Subir a Snowflake
-    success, nrows, ncols = write_pandas(
+    # ⚠️ CORREGIDO: write_pandas devuelve 4 valores ahora
+    success, nrows, ncols, metadata = write_pandas(
         conn=conn,
         df=df,
         table_name=TABLE_NAME,
@@ -66,6 +63,8 @@ def upload_csv_to_snowflake(force=False):
         print(f"✅ ¡Carga completada!")
         print(f"📊 Filas subidas: {nrows}")
         print(f"📋 Columnas: {ncols}")
+        if metadata:
+            print(f"📦 Metadatos: {metadata}")
     else:
         print("❌ Error al subir los datos.")
 
