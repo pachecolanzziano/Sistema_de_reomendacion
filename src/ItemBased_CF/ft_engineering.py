@@ -75,3 +75,45 @@ def get_train_test(path=DEFAULT_CSV_PATH, test_size=0.2):
     )
     train_matrix = build_interaction_matrix(train_df, n_customers, n_items)
     return train_matrix, test_df, customer_map, item_map, description_map
+
+############## PREPROCESAMIENTO PARA FP GROWTH############
+
+DEFAULT_CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DataSetLimpio.csv")
+
+def get_train_test_fpgrowth(path=DEFAULT_CSV_PATH, test_size=0.2):
+    """
+    Ingeniería de características adaptada a las columnas reales del dataset:
+    ['Invoice', 'StockCode', 'Description', 'Quantity', 'InvoiceDate', 'Price', 'CustomerID', 'Country']
+    """
+    print("Leyendo el archivo CSV...")
+    df = pd.read_csv(path, parse_dates=["InvoiceDate"])
+    
+    # Limpiamos usando exactamente tus nombres de columnas
+    df = df.dropna(subset=["Invoice", "StockCode"])
+    df = df.sort_values("InvoiceDate").reset_index(drop=True)
+
+    # Mapeo de descripciones usando la columna 'Description'
+    description_map = (
+        df.drop_duplicates(subset=["StockCode"])
+        .set_index("StockCode")["Description"]
+        .to_dict()
+    )
+
+    # Split temporal estricto (el 20% más reciente al final)
+    split_idx = int(len(df) * (1 - test_size))
+    train_df = df.iloc[:split_idx].copy()
+    test_df = df.iloc[split_idx:].copy()
+
+    print("Construyendo formato de transacciones para entrenamiento...")
+    # Agrupamos por 'Invoice' y juntamos los 'StockCode' en listas
+    train_basket_list = (
+        train_df.groupby("Invoice")["StockCode"]
+        .apply(list)
+        .tolist()
+    )
+
+    return train_basket_list, test_df, description_map
+
+if __name__ == "__main__":
+    basket, test, desc = get_train_test_fpgrowth()
+    print(f"¡Proceso exitoso! Total de transacciones de entrenamiento: {len(basket)}")
