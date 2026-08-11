@@ -180,5 +180,10 @@ cython_debug/
 .cursorignore
 .cursorindexingignore"*.tar" 
 
-# === FIREBASE / CREDENTIALS ===
-firebase_service_account.json
+# === SNOWFLAKE ===
+*.der
+*.pem
+*.pub
+*.key
+snowflake_key
+snowflake_key.*
