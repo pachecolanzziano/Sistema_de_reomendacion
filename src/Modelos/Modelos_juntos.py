@@ -18,22 +18,20 @@ recompra es una señal de compra real, no ruido — excluirla perjudicaba
 notablemente las métricas de ambos modelos en las pruebas del proyecto.
 """
 
-import os
 import random
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import MultiLabelBinarizer
 from implicit.als import AlternatingLeastSquares
 
-from ft_engineering import get_train_test
+from ft_engineering import load_raw, get_train_test, get_train_test_fpgrowth
 
 K = 10
 FACTORS = 50
 REGULARIZATION = 0.01
 ITERATIONS = 20
-
-DEFAULT_CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DataSetLimpio.csv")
 
 
 # ============================================================
@@ -203,27 +201,13 @@ def run_als(train_matrix, test_df, customer_map, item_map, description_map):
 # FP-GROWTH (cross-sell por co-ocurrencia en factura)
 # ============================================================
 
-def get_train_test_fpgrowth(path=DEFAULT_CSV_PATH, test_size=0.2):
-    df = pd.read_csv(path, encoding="utf-8-sig", parse_dates=["InvoiceDate"])
-    df = df.dropna(subset=["Invoice", "StockCode"])
-    df = df.sort_values("InvoiceDate").reset_index(drop=True)
-
-    description_map = (
-        df.drop_duplicates(subset=["StockCode"]).set_index("StockCode")["Description"].to_dict()
-    )
-
-    split_idx = int(len(df) * (1 - test_size))
-    train_df = df.iloc[:split_idx].copy()
-    test_df = df.iloc[split_idx:].copy()
-
-    return train_df, test_df, description_map
-
-
-def build_basket_matrix(train_df):
-    basket_counts = (
-        train_df.groupby(["Invoice", "StockCode"])["StockCode"].count().unstack(fill_value=0)
-    )
-    return basket_counts.astype(bool)
+def build_basket_matrix(train_basket_list):
+    """A partir de la lista de canastas (una lista de StockCode por factura)
+    que entrega get_train_test_fpgrowth() en ft_engineering.py, arma la matriz
+    binaria factura x producto que necesita recommend_fp_growth()."""
+    mlb = MultiLabelBinarizer()
+    basket_array = mlb.fit_transform(train_basket_list)
+    return pd.DataFrame(basket_array.astype(bool), columns=mlb.classes_)
 
 
 def recommend_fp_growth(producto_base_code, basket_matrix, k=K):
@@ -277,14 +261,16 @@ def run_fp_growth(test_df, basket_matrix, description_map):
 # ============================================================
 
 def main():
-    train_matrix, test_df, customer_map, item_map, description_map = get_train_test()
+    raw_df = load_raw()  # una sola lectura del csv para los 4 modelos
+
+    train_matrix, test_df, customer_map, item_map, description_map = get_train_test(raw_df=raw_df)
 
     run_popularity(train_matrix, test_df, item_map, description_map)
     run_item_based_cf(train_matrix, test_df, customer_map, item_map, description_map)
     run_als(train_matrix, test_df, customer_map, item_map, description_map)
 
-    fp_train_df, fp_test_df, fp_description_map = get_train_test_fpgrowth()
-    basket_matrix = build_basket_matrix(fp_train_df)
+    train_basket_list, fp_test_df, fp_description_map = get_train_test_fpgrowth(raw_df=raw_df)
+    basket_matrix = build_basket_matrix(train_basket_list)
     run_fp_growth(fp_test_df, basket_matrix, fp_description_map)
 
 
