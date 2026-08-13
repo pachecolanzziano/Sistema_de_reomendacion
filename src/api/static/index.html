@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recomendador de productos</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --navy: #1E2761;
+    --navy-dark: #141B4D;
+    --coral: #FF6B4A;
+    --teal: #2EC4B6;
+    --ice: #CADCFC;
+    --bg: #F5F7FC;
+    --card: #FFFFFF;
+    --text: #232842;
+    --text-muted: #6B7290;
+    --border: #E3E7F5;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  header {
+    background: var(--navy);
+    padding: 2.5rem 1.5rem 3.5rem;
+    text-align: center;
+  }
+
+  header h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    color: #fff;
+    font-size: clamp(1.6rem, 4vw, 2.3rem);
+    margin: 0 0 0.4rem;
+  }
+
+  header p {
+    color: var(--ice);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  main {
+    max-width: 960px;
+    margin: -2rem auto 4rem;
+    padding: 0 1.25rem;
+  }
+
+  .search-card {
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(20, 27, 77, 0.12);
+    padding: 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .search-card input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.8rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  .search-card input:focus { border-color: var(--coral); }
+
+  .search-card button {
+    background: var(--coral);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.8rem 1.6rem;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: filter .15s;
+  }
+
+  .search-card button:hover { filter: brightness(1.08); }
+  .search-card button:disabled { opacity: 0.6; cursor: default; }
+
+  .status {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+
+  .status.error { color: #B0301C; }
+
+  section.results { margin-top: 2.5rem; }
+
+  section.results h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    margin: 0 0 0.2rem;
+  }
+
+  section.results .subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0 0 1.2rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 0.9rem;
+  }
+
+  .product-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.35;
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+  }
+
+  .product-card.clickable {
+    cursor: pointer;
+    transition: transform .12s, border-color .12s, box-shadow .12s;
+  }
+
+  .product-card.clickable:hover {
+    transform: translateY(-3px);
+    border-color: var(--coral);
+    box-shadow: 0 8px 20px rgba(255, 107, 74, 0.18);
+  }
+
+  .product-card.selected {
+    border-color: var(--navy);
+    background: var(--navy);
+    color: #fff;
+  }
+
+  #crossSellSection {
+    display: none;
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .crumb {
+    display: inline-block;
+    background: var(--ice);
+    color: var(--navy-dark);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    margin-bottom: 0.7rem;
+  }
+
+  .cross-sell-card {
+    background: var(--card);
+    border: 1.5px solid var(--teal);
+    border-left: 5px solid var(--teal);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Recomendador de productos</h1>
+  <p>Escribe un Customer ID para ver sus 10 recomendaciones</p>
+</header>
+
+<main>
+  <div class="search-card">
+    <input type="text" id="customerInput" placeholder="Customer ID (ej. 12347)" autocomplete="off">
+    <button id="searchBtn" onclick="buscarRecomendaciones()">Ver recomendaciones</button>
+  </div>
+
+  <div id="statusMsg"></div>
+
+  <section class="results" id="alsSection" style="display:none">
+    <h2>Recomendado para ti</h2>
+    <p class="subtitle">Selecciona un producto para ver qué suele comprarse junto con él</p>
+    <div class="grid" id="alsGrid"></div>
+  </section>
+
+  <section id="crossSellSection">
+    <span class="crumb" id="crossSellCrumb"></span>
+    <h2>Suele comprarse junto con este producto</h2>
+    <div class="grid" id="crossSellGrid"></div>
+  </section>
+</main>
+
+<script>
+async function buscarRecomendaciones() {
+  const input = document.getElementById('customerInput');
+  const btn = document.getElementById('searchBtn');
+  const customerId = input.value.trim();
+  const statusMsg = document.getElementById('statusMsg');
+  const alsSection = document.getElementById('alsSection');
+  const crossSellSection = document.getElementById('crossSellSection');
+
+  crossSellSection.style.display = 'none';
+  alsSection.style.display = 'none';
+  statusMsg.innerHTML = '';
+
+  if (!customerId) {
+    statusMsg.innerHTML = '<div class="status error">Escribe un Customer ID.</div>';
+    return;
+  }
+
+  btn.disabled = true;
+  statusMsg.innerHTML = '<div class="status">Buscando recomendaciones...</div>';
+
+  try {
+    const res = await fetch(`/api/recommendations/${encodeURIComponent(customerId)}`);
+    if (res.status === 404) {
+      statusMsg.innerHTML = '<div class="status error">No encontramos historial de compras para ese Customer ID.</div>';
+      return;
+    }
+    if (!res.ok) throw new Error('Error de servidor');
+
+    const productos = await res.json();
+    statusMsg.innerHTML = '';
+    renderAlsGrid(productos);
+    alsSection.style.display = 'block';
+  } catch (err) {
+    statusMsg.innerHTML = '<div class="status error">Algo salió mal al buscar las recomendaciones. Intenta de nuevo.</div>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderAlsGrid(productos) {
+  const grid = document.getElementById('alsGrid');
+  grid.innerHTML = '';
+  productos.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'product-card clickable';
+    card.textContent = p.description;
+    card.onclick = () => seleccionarProducto(p, card);
+    grid.appendChild(card);
+  });
+}
+
+async function seleccionarProducto(producto, cardEl) {
+  document.querySelectorAll('#alsGrid .product-card').forEach(c => c.classList.remove('selected'));
+  cardEl.classList.add('selected');
+
+  const crossSellSection = document.getElementById('crossSellSection');
+  const crumb = document.getElementById('crossSellCrumb');
+  const grid = document.getElementById('crossSellGrid');
+
+  crumb.textContent = producto.description;
+  grid.innerHTML = '<div class="status">Buscando productos relacionados...</div>';
+  crossSellSection.style.display = 'block';
+  crossSellSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  try {
+    const res = await fetch(`/api/products/${encodeURIComponent(producto.stock_code)}/cross-sell`);
+    if (!res.ok) throw new Error('Error de servidor');
+    const relacionados = await res.json();
+
+    if (relacionados.length === 0) {
+      grid.innerHTML = '<div class="status">Todavía no hay suficientes datos de co-compra para este producto.</div>';
+      return;
+    }
+
+    grid.innerHTML = '';
+    relacionados.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'product-card cross-sell-card';
+      card.textContent = p.description;
+      grid.appendChild(card);
+    });
+  } catch (err) {
+    grid.innerHTML = '<div class="status error">Algo salió mal al buscar productos relacionados.</div>';
+  }
+}
+
+document.getElementById('customerInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') buscarRecomendaciones();
+});
+</script>
+
+</body>
+</html>
