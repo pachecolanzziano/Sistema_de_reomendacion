@@ -1,40 +1,44 @@
 """
 API para visualizar las recomendaciones de ALS y FP-Growth.
 
-Carga los datos de Snowflake y entrena ambos modelos UNA sola vez al
-arrancar (lifespan) y los sirve desde memoria — ningún endpoint vuelve a
-entrenar ni a leer Snowflake por request.
+Esta versión NO se conecta a Snowflake ni entrena nada: carga los
+artefactos ya entrenados por train_and_export.py (src/api/artifacts/) UNA
+sola vez al arrancar y los sirve desde memoria. Así el contenedor de Docker
+arranca al instante y no necesita credenciales de Snowflake en runtime.
 
-Cómo correrla (desde la raíz del proyecto, la carpeta que contiene `src/`):
-    uvicorn src.api.main:app --reload
+Si aún no generaste los artefactos, corre primero (con acceso a Snowflake):
+    python -m src.api.train_and_export
+
+Cómo correr la API (desde la raíz del proyecto, la carpeta que contiene `src/`):
+    python -m uvicorn src.api.main:app --reload
 """
 
+import pickle
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from implicit.cpu.als import AlternatingLeastSquares
+from scipy.sparse import load_npz
 
-from src.api.ft_engineering2 import load_raw, get_als_recommender, get_fpgrowth_recommender
-from src.api.Modelos_top import recomendar_als, recomendar_fp_growth
+from src.api.Modelos_top import recomendar_als, recomendar_fp_growth, recomendar_popularidad
+
+ARTIFACTS_DIR = Path(__file__).resolve().parent / "artifacts"
 
 modelos = {}
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Cargando datos desde Snowflake y entrenando modelos...")
-    raw_df = load_raw()
+    print("Cargando artefactos pre-entrenados...")
 
-    (
-        modelos["als_model"],
-        modelos["train_matrix"],
-        modelos["customer_id_to_code"],
-        modelos["item_map"],
-        modelos["description_map"],
-    ) = get_als_recommender(raw_df=raw_df)
+    modelos["als_model"] = AlternatingLeastSquares.load(str(ARTIFACTS_DIR / "als_model.npz"))
+    modelos["train_matrix"] = load_npz(ARTIFACTS_DIR / "train_matrix.npz")
 
-    modelos["basket_matrix"], modelos["fp_description_map"] = get_fpgrowth_recommender(raw_df=raw_df)
+    with open(ARTIFACTS_DIR / "artifacts.pkl", "rb") as f:
+        modelos.update(pickle.load(f))
 
     print("Modelos listos.")
     yield
@@ -61,7 +65,9 @@ def get_recommendations(customer_id: str):
         modelos["description_map"],
     )
     if recs is None:
-        raise HTTPException(status_code=404, detail="CustomerID no encontrado en el histórico")
+        recs = recomendar_popularidad(
+            modelos["popularity_top_codes"], modelos["popularity_description_map"]
+        )
     return recs
 
 

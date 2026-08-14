@@ -31,6 +31,15 @@ def recomendar_als(customer_id, model, train_matrix, customer_id_to_code, item_m
     ]
 
 
+def recomendar_popularidad(top_codes, description_map, k=K):
+    """Top-k de productos más vendidos. Se usa como respaldo cuando
+    recomendar_als() no encuentra al cliente (nuevo o CustomerID inválido)."""
+    return [
+        {"stock_code": c, "description": description_map.get(c, c)}
+        for c in top_codes[:k]
+    ]
+
+
 def recomendar_fp_growth(stock_code, basket_matrix, description_map, k=K):
     """Top-k de productos que suelen comprarse junto con stock_code.
     Lista vacía si el producto no aparece en el histórico de entrenamiento."""

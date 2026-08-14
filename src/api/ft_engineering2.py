@@ -104,6 +104,26 @@ def get_als_recommender(raw_df=None):
     return model, train_matrix, customer_id_to_code, item_map, description_map
 
 
+def get_popularity_recommender(raw_df=None, k=10):
+    """Top-k de productos más vendidos (por unidades totales), sin importar
+    el cliente. Se usa como respaldo cuando un CustomerID no existe en el
+    histórico de ALS (cliente nuevo o inválido)."""
+    if raw_df is None:
+        raw_df = load_raw()
+
+    df = raw_df.dropna(subset=["STOCKCODE"])
+    description_map = (
+        df.dropna(subset=["DESCRIPTION"])
+        .drop_duplicates(subset=["STOCKCODE"])
+        .set_index("STOCKCODE")["DESCRIPTION"]
+        .to_dict()
+    )
+    top_codes = (
+        df.groupby("STOCKCODE")["QUANTITY"].sum().sort_values(ascending=False).head(k).index.tolist()
+    )
+    return top_codes, description_map
+
+
 # ============================================================
 # FP-GROWTH (por factura) — construida con el 100% del histórico
 # ============================================================
