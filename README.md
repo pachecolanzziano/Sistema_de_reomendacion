@@ -725,6 +725,49 @@ Reglas de asociación
    ↓
 Recomendaciones para Cross Selling
 ```
+# 📈 Impacto y Viabilidad de Negocio
+
+Los KPIs definidos buscan estimar el potencial comercial del sistema:
+
+| KPI | Línea base | Objetivo |
+|---|---:|---:|
+| **Ticket promedio por cliente** | €464,00 | **€533,60 (+15%)** |
+| **Ventas de productos recomendados** | — | **Incremento** |
+
+## 🔬 Simulación de Viabilidad
+
+Dado que se trata de un proyecto académico y no se realizará una implementación en producción, los KPIs no pueden validarse de forma causal. Por ello, se realizó un **backtesting sobre el comportamiento histórico** y una **simulación de escenarios de impacto**.
+
+| Modelo | Evaluación | Coincidencia observada | Valor observado* |
+|---|---|---:|---:|
+| **ALS** | 2.285 clientes | **16,59%** | **€114,99 / cliente con ≥1 coincidencia** |
+| **FP-Growth** | 5.710 facturas | **14,14%** | **€82,32 / factura** |
+
+\* Valor de compras posteriores que coincidieron con productos recomendados durante el backtesting.
+
+### 🎯 KPI: Ticket promedio
+
+El objetivo requiere un incremento de **€69,60 por cliente**. En la simulación ALS, sería necesario que aproximadamente **60,53% del valor observado de coincidencias** se convierta en valor incremental para alcanzar el objetivo.
+
+| Escenario | Incrementalidad | Ticket simulado |
+|---|---:|---:|
+| Conservador | 25% | €492,75 |
+| Base | 50% | €521,50 |
+| Optimista | 75% | **€550,24** |
+| **Umbral KPI** | **60,53%** | **€533,60** |
+
+### 🛒 KPI: Ventas de productos recomendados
+
+FP-Growth mostró una coincidencia del **14,14%** en las recomendaciones evaluadas. La simulación permite estimar el valor potencial de cross-selling bajo distintos niveles de incrementalidad:
+
+| Escenario | Incrementalidad | Valor simulado / factura |
+|---|---:|---:|
+| Conservador | 25% | €20,58 |
+| Base | 50% | €41,16 |
+| Optimista | 75% | €61,74 |
+
+> **Conclusión:** Los resultados sugieren que el sistema presenta **potencial de viabilidad comercial** bajo determinados escenarios de incrementalidad. Estos valores representan una simulación basada en backtesting y no garantizan el cumplimiento real de los KPIs.
+
 
 # ⚙️ Instalación
 
