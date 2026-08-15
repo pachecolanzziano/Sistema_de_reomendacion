@@ -187,6 +187,3 @@ cython_debug/
 *.key
 snowflake_key
 snowflake_key.*
-
-# Control de exceso de peso para carga en github
-src/api/artifacts/

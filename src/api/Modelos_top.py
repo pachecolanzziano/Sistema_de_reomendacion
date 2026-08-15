@@ -8,6 +8,8 @@ el modelo ALS y la matriz de FP-Growth ya entrenados en dos funciones
 simples, para que main.py no tenga que conocer los detalles de cada modelo.
 """
 
+import numpy as np
+
 K = 10
 
 
@@ -40,19 +42,49 @@ def recomendar_popularidad(top_codes, description_map, k=K):
     ]
 
 
-def recomendar_fp_growth(stock_code, basket_matrix, description_map, k=K):
+def recomendar_fp_growth(
+    stock_code,
+    basket_sparse,
+    item_columns,
+    stock_code_to_col,
+    description_map,
+    popularity_top_codes,
+    popularity_description_map,
+    k=K,
+):
     """Top-k de productos que suelen comprarse junto con stock_code.
-    Lista vacía si el producto no aparece en el histórico de entrenamiento."""
-    if stock_code not in basket_matrix.columns:
-        return []
-    transacciones = basket_matrix[basket_matrix[stock_code]]
-    if len(transacciones) == 0:
-        return []
-    coocurrencias = (
-        transacciones.drop(columns=[stock_code]).sum().sort_values(ascending=False)
-    )
-    top_codes = coocurrencias.head(k).index.tolist()
-    return [
-        {"stock_code": c, "description": description_map.get(c, c)}
-        for c in top_codes
-    ]
+
+    Si las co-ocurrencias reales no alcanzan para completar k (poco
+    historial de ese producto, o directamente no existe en el histórico
+    de FP-Growth), rellena con el baseline de popularidad hasta llegar a
+    k — nunca repite un producto ya incluido ni el propio stock_code.
+
+    basket_sparse es una matriz dispersa (facturas x productos); item_columns
+    e stock_code_to_col traducen entre StockCode e índice de columna."""
+    resultados = []
+    col_idx = stock_code_to_col.get(stock_code)
+
+    if col_idx is not None:
+        mask = basket_sparse[:, col_idx].toarray().ravel().astype(bool)
+        if mask.any():
+            co_occurrence = np.asarray(basket_sparse[mask].sum(axis=0)).ravel()
+            co_occurrence[col_idx] = -1  # nunca recomendar el mismo producto
+            top_idx = np.argsort(-co_occurrence, kind="stable")[:k]
+            top_idx = [i for i in top_idx if co_occurrence[i] > 0]
+            resultados = [
+                {"stock_code": item_columns[i], "description": description_map.get(item_columns[i], item_columns[i])}
+                for i in top_idx
+            ]
+
+    if len(resultados) < k:
+        ya_incluidos = {r["stock_code"] for r in resultados}
+        ya_incluidos.add(stock_code)
+        for code in popularity_top_codes:
+            if len(resultados) >= k:
+                break
+            if code in ya_incluidos:
+                continue
+            resultados.append({"stock_code": code, "description": popularity_description_map.get(code, code)})
+            ya_incluidos.add(code)
+
+    return resultados

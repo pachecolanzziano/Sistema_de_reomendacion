@@ -104,10 +104,14 @@ def get_als_recommender(raw_df=None):
     return model, train_matrix, customer_id_to_code, item_map, description_map
 
 
-def get_popularity_recommender(raw_df=None, k=10):
+def get_popularity_recommender(raw_df=None, k=30):
     """Top-k de productos más vendidos (por unidades totales), sin importar
     el cliente. Se usa como respaldo cuando un CustomerID no existe en el
-    histórico de ALS (cliente nuevo o inválido)."""
+    histórico de ALS (cliente nuevo o inválido), y también para rellenar
+    FP-Growth cuando no hay suficientes co-ocurrencias reales.
+
+    k=30 por defecto (más de los 10 que se muestran al final) para tener
+    margen de sobra al excluir duplicados o el producto seleccionado."""
     if raw_df is None:
         raw_df = load_raw()
 
@@ -129,11 +133,21 @@ def get_popularity_recommender(raw_df=None, k=10):
 # ============================================================
 
 def get_fpgrowth_recommender(raw_df=None):
-    """Arma la matriz binaria factura x producto que necesita FP-Growth,
+    """Arma la matriz dispersa factura x producto que necesita FP-Growth,
     ya lista para recomendar.
 
+    Se guarda como matriz DISPERSA (scipy.sparse), no como DataFrame denso:
+    la enorme mayoría de combinaciones factura-producto son 0 (una factura
+    típica tiene un puñado de productos, no miles), así que un DataFrame
+    denso desperdicia memoria y espacio en disco sin necesidad — esto fue
+    lo que infló el .pkl a 163MB. La matriz dispersa guarda lo mismo con
+    una fracción del tamaño, sin perder ningún dato.
+
     Devuelve:
-        basket_matrix: DataFrame booleano, filas = facturas, columnas = StockCode
+        basket_sparse: matriz dispersa (facturas x productos), booleana
+        item_columns: lista de StockCode, en el mismo orden que las
+            columnas de basket_sparse
+        stock_code_to_col: StockCode -> índice de columna (lookup O(1))
         description_map: StockCode -> Description
     """
     if raw_df is None:
@@ -145,8 +159,9 @@ def get_fpgrowth_recommender(raw_df=None):
     )
 
     basket_list = df.groupby("INVOICE")["STOCKCODE"].apply(list).tolist()
-    mlb = MultiLabelBinarizer()
-    basket_array = mlb.fit_transform(basket_list)
-    basket_matrix = pd.DataFrame(basket_array.astype(bool), columns=mlb.classes_)
+    mlb = MultiLabelBinarizer(sparse_output=True)
+    basket_sparse = mlb.fit_transform(basket_list).tocsr()
+    item_columns = list(mlb.classes_)
+    stock_code_to_col = {code: i for i, code in enumerate(item_columns)}
 
-    return basket_matrix, description_map
+    return basket_sparse, item_columns, stock_code_to_col, description_map

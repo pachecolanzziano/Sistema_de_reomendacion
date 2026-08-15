@@ -36,6 +36,7 @@ async def lifespan(app: FastAPI):
 
     modelos["als_model"] = AlternatingLeastSquares.load(str(ARTIFACTS_DIR / "als_model.npz"))
     modelos["train_matrix"] = load_npz(ARTIFACTS_DIR / "train_matrix.npz")
+    modelos["basket_matrix"] = load_npz(ARTIFACTS_DIR / "basket_matrix.npz")
 
     with open(ARTIFACTS_DIR / "artifacts.pkl", "rb") as f:
         modelos.update(pickle.load(f))
@@ -73,4 +74,12 @@ def get_recommendations(customer_id: str):
 
 @app.get("/api/products/{stock_code}/cross-sell")
 def get_cross_sell(stock_code: str):
-    return recomendar_fp_growth(stock_code, modelos["basket_matrix"], modelos["fp_description_map"])
+    return recomendar_fp_growth(
+        stock_code,
+        modelos["basket_matrix"],
+        modelos["item_columns"],
+        modelos["stock_code_to_col"],
+        modelos["fp_description_map"],
+        modelos["popularity_top_codes"],
+        modelos["popularity_description_map"],
+    )

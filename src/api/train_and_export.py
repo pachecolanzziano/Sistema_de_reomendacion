@@ -41,7 +41,10 @@ def main():
     save_npz(ARTIFACTS_DIR / "train_matrix.npz", train_matrix)
 
     print("Construyendo matriz de FP-Growth...")
-    basket_matrix, fp_description_map = get_fpgrowth_recommender(raw_df=raw_df)
+    basket_sparse, item_columns, stock_code_to_col, fp_description_map = (
+        get_fpgrowth_recommender(raw_df=raw_df)
+    )
+    save_npz(ARTIFACTS_DIR / "basket_matrix.npz", basket_sparse)
 
     print("Calculando baseline de popularidad...")
     popularity_top_codes, popularity_description_map = get_popularity_recommender(raw_df=raw_df)
@@ -52,7 +55,8 @@ def main():
                 "customer_id_to_code": customer_id_to_code,
                 "item_map": item_map,
                 "description_map": description_map,
-                "basket_matrix": basket_matrix,
+                "item_columns": item_columns,
+                "stock_code_to_col": stock_code_to_col,
                 "fp_description_map": fp_description_map,
                 "popularity_top_codes": popularity_top_codes,
                 "popularity_description_map": popularity_description_map,
