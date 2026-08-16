@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+notebooks/
+Power_BI/
+documentacion/
+.git/
+src/api/artifacts/artifacts.pkl
