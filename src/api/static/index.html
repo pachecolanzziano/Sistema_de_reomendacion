@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recomendador de productos</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Recomendador de productos</h1>
+  <p>Escribe un Customer ID para ver sus 10 recomendaciones</p>
+</header>
+
+<main>
+  <div class="search-card">
+    <input type="text" id="customerInput" placeholder="Customer ID (ej. 12347)" autocomplete="off">
+    <button id="searchBtn">Ver recomendaciones</button>
+  </div>
+
+  <div id="statusMsg"></div>
+
+  <section class="results" id="alsSection" style="display:none">
+    <h2>Recomendado para ti</h2>
+    <p class="subtitle">Selecciona un producto para ver qué suele comprarse junto con él</p>
+    <div class="grid" id="alsGrid"></div>
+  </section>
+
+  <section id="crossSellSection">
+    <span class="crumb" id="crossSellCrumb"></span>
+    <h2>Suele comprarse junto con este producto</h2>
+    <div class="grid" id="crossSellGrid"></div>
+  </section>
+</main>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
