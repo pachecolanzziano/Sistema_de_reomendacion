@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --navy: #1E2761;
+  --navy-dark: #141B4D;
+  --coral: #FF6B4A;
+  --teal: #2EC4B6;
+  --ice: #CADCFC;
+  --bg: #F5F7FC;
+  --card: #FFFFFF;
+  --text: #232842;
+  --text-muted: #6B7290;
+  --border: #E3E7F5;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  background: var(--navy);
+  padding: 2.5rem 1.5rem 3.5rem;
+  text-align: center;
+}
+
+header h1 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  color: #fff;
+  font-size: clamp(1.6rem, 4vw, 2.3rem);
+  margin: 0 0 0.4rem;
+}
+
+header p {
+  color: var(--ice);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+main {
+  max-width: 960px;
+  margin: -2rem auto 4rem;
+  padding: 0 1.25rem;
+}
+
+.search-card {
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(20, 27, 77, 0.12);
+  padding: 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.search-card input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.8rem 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.search-card input:focus { border-color: var(--coral); }
+
+.search-card button {
+  background: var(--coral);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.8rem 1.6rem;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: filter .15s;
+}
+
+.search-card button:hover { filter: brightness(1.08); }
+.search-card button:disabled { opacity: 0.6; cursor: default; }
+
+.status {
+  text-align: center;
+  padding: 2rem 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.status.error { color: #B0301C; }
+
+section.results { margin-top: 2.5rem; }
+
+section.results h2 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 1.3rem;
+  margin: 0 0 0.2rem;
+}
+
+section.results .subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0 0 1.2rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.9rem;
+}
+
+.product-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+}
+
+.product-card.clickable {
+  cursor: pointer;
+  transition: transform .12s, border-color .12s, box-shadow .12s;
+}
+
+.product-card.clickable:hover {
+  transform: translateY(-3px);
+  border-color: var(--coral);
+  box-shadow: 0 8px 20px rgba(255, 107, 74, 0.18);
+}
+
+.product-card.selected {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: #fff;
+}
+
+#crossSellSection {
+  display: none;
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.crumb {
+  display: inline-block;
+  background: var(--ice);
+  color: var(--navy-dark);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  margin-bottom: 0.7rem;
+}
+
+.cross-sell-card {
+  background: var(--card);
+  border: 1.5px solid var(--teal);
+  border-left: 5px solid var(--teal);
+}
