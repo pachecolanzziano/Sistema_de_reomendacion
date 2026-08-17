@@ -11,6 +11,8 @@ Cómo correr la API (desde la raíz del proyecto, la carpeta que contiene `src/`
 """
 
 import pickle
+import subprocess
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -46,9 +48,19 @@ def ensure_artifacts() -> None:
         "Faltan artefactos pre-entrenados "
         f"({', '.join(missing_files)}). Ejecutando train_and_export..."
     )
-    from src.api.train_and_export import main as train_and_export
+    subprocess.run(
+        [sys.executable, "-m", "src.api.train_and_export"],
+        check=True,
+    )
 
-    train_and_export()
+    remaining_files = [
+        filename for filename in ARTIFACT_FILES if not (ARTIFACTS_DIR / filename).is_file()
+    ]
+    if remaining_files:
+        raise RuntimeError(
+            "El entrenamiento terminó sin generar todos los artefactos: "
+            f"{', '.join(remaining_files)}"
+        )
 
 
 @asynccontextmanager
