@@ -26,7 +26,6 @@ from src.api.ft_engineering2 import (
 
 ARTIFACTS_DIR = Path(__file__).resolve().parent / "artifacts"
 
-
 def main():
     ARTIFACTS_DIR.mkdir(exist_ok=True)
 

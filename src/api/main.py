@@ -24,11 +24,11 @@ from implicit.cpu.als import AlternatingLeastSquares
 from scipy.sparse import load_npz
 
 from src.api.Modelos_top import recomendar_als, recomendar_fp_growth, recomendar_popularidad
+import train_and_export
 
 ARTIFACTS_DIR = Path(__file__).resolve().parent / "artifacts"
 
 modelos = {}
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     yield
     modelos.clear()
 
-
+# train_and_export()
 app = FastAPI(title="Recomendador Online Retail", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="src/api/static"), name="static")
 
