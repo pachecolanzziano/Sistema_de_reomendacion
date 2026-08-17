@@ -29,11 +29,13 @@
 17. [Tecnologías Utilizadas](#-tecnologías-utilizadas)
 18. [Estructura del Proyecto](#-estructura-del-proyecto)
 19. [Impacto y Viabilidad de Negocio](#-impacto-y-viabilidad-de-negocio)
-20. [Instalación](#-instalación)
-21. [Configuración del Entorno](#-configuración-del-entorno)
-22. [Ejecución del Proyecto](#-ejecución-del-proyecto)
-23. [Estado del Proyecto — Demo 1](#-estado-del-proyecto--demo-1)
-24. [Equipo](#-equipo)
+20. [API](#-API)
+21. [Streamlit](#-Streamlit)
+22. [Docker](#-Docker)
+23. [Instalación](#-instalación)
+24. [Configuración del Entorno](#-configuración-del-entorno)
+25. [Ejecución del Proyecto](#-ejecución-del-proyecto)
+26. [Equipo](#-equipo)
 
 ---
 
@@ -69,14 +71,16 @@ Desarrollar un sistema capaz de transformar el historial de compras en **recomen
 
 - Analizar y comprender el comportamiento transaccional de los clientes mediante EDA.
 - Identificar y tratar problemas de calidad presentes en los datos.
-- Preparar una matriz de interacción Cliente × Producto.
+- Preparar una matriz de interacción Cliente × Producto y las estructuras necesarias para los modelos de recomendación.
 - Implementar un **Popularity Baseline** como referencia de comparación.
 - Implementar un modelo **Item-Based Collaborative Filtering**.
 - Implementar un modelo de factorización **ALS — Alternating Least Squares**.
-- Implementar **FP-Growth** 
-- Evaluar la capacidad de los modelos para recomendar productos relevantes.
+- Implementar **FP-Growth** para identificar oportunidades de Cross Selling.
+- Evaluar la capacidad de los modelos para recomendar productos relevantes mediante métricas de recomendación.
 - Comparar el desempeño de los diferentes enfoques de recomendación.
-- Establecer una base técnica para futuras etapas de integración y despliegue.
+- Simular el impacto económico potencial de las recomendaciones frente a los KPIs de negocio.
+- Desarrollar una **API con FastAPI** para exponer las recomendaciones generadas por ALS y FP-Growth.
+- Establecer una base técnica para la integración de una interfaz de usuario y futuras etapas de despliegue.
 
 ---
 
@@ -176,8 +180,6 @@ El análisis permitió identificar una distribución desigual de las interaccion
 - La matriz Cliente × Producto presenta una elevada dispersión.
 
 Estos hallazgos justifican la comparación entre un modelo basado en popularidad y un modelo personalizado basado en similitud entre productos.
-
-> **Nota de alcance Demo 1:** FP-Growth se incorpora como enfoque complementario para Cross Selling y se evalúa de forma independiente debido a que trabaja a nivel de factura.
 
 ---
 
@@ -611,22 +613,22 @@ Estas limitaciones deberán considerarse durante la interpretación de resultado
 | **Lenguaje** | Python |
 | **Manipulación de datos** | Pandas, NumPy |
 | **Matriz dispersa** | SciPy |
-| **Machine Learning** | Scikit-Learn |
-| **Recomendación / Factorización** | Implicit |
+| **Machine Learning** | Scikit-Learn, Implicit |
+| **Recomendación** | ALS, FP-Growth, Item-Based CF |
 | **Reglas de asociación** | MLxtend |
 | **Similitud** | Cosine Similarity |
 | **EDA y visualización** | Jupyter Notebook, Matplotlib, Seaborn, Plotly |
+| **Base de Datos** | Snowflake |
+| **API** | FastAPI |
+| **Interfaz** | Streamlit |
 | **Control de versiones** | Git, GitHub |
-| **Despliegue previsto** | FastAPI / Streamlit |
+| **Despliegue / Contenedores** | Docker |
 
 Las dependencias del proyecto se encuentran documentadas en:
 
 ```text
 requirements.txt
 ```
-
-> **Nota:** FastAPI y Streamlit corresponden a componentes previstos para etapas posteriores de integración y despliegue. En Demo 1 el foco se encuentra en EDA, preparación de datos, construcción de la matriz de interacción e implementación y evaluación de los modelos de recomendación.
-
 ---
 
 # 🗂️ Estructura del Proyecto
@@ -662,54 +664,90 @@ Sistema_de_reomendacion/
 | `src/Modelos/item_based_cf.py` | Implementación del modelo Item-Based Collaborative Filtering. |
 | `src/Modelos/als_model.py` | Implementación del modelo ALS. |
 | `src/Modelos/Modelos_juntos.py` | Integración y evaluación conjunta de los diferentes enfoques de recomendación. |
+| `src/evaluation/simulate_als_business_impact.py` | Simulación del impacto económico de las recomendaciones generadas por ALS. |
+| `src/evaluation/simulate_fp_growth_business_impact.py` | Simulación del impacto económico de las recomendaciones de Cross Selling generadas por FP-Growth. |
+| `src/evaluation/simulate_business_kpis_combined.py` | Consolidación de los resultados de ALS y FP-Growth para generar escenarios de viabilidad frente a los KPIs de negocio. |
+| `src/api/train_and_export.py` | Entrenamiento y exportación de los artefactos necesarios para ejecutar la API. |
+| `src/api/main.py` | Punto de entrada de la API FastAPI y definición de los endpoints de recomendación. |
+| `src/api/Modelos_top.py` | Funciones de inferencia utilizadas por la API para ALS, FP-Growth y el fallback de popularidad. |
+| `src/api/ft_engineering2.py` | Preparación de datos utilizada por los procesos de entrenamiento y exportación de los modelos de la API. |
+| `src/api/artifacts/` | Almacena los modelos, matrices y mappings pre-entrenados utilizados por la API. |
 | `requirements.txt` | Dependencias necesarias para ejecutar el proyecto. |
 | `README.md` | Documentación general del proyecto. |
 
 ---
 
-# 🔁 Flujo Técnico Actual
+# 🔁 Flujo Técnico
 
 ```text
-                 DATASET ORIGINAL
-                        │
-                        ▼
-                   EDA / QA
-                        │
-                        ▼
-             LIMPIEZA Y PREPARACIÓN
-                        │
-                        ▼
-                DataSetLimpio.csv
-                        │
-                        ▼
-               FEATURE ENGINEERING
-                        │
-                        ▼
-             Split temporal 80 / 20
-                        │
-                        ▼
-             Matriz Cliente × Producto
-                        │
-       ┌────────────────┼────────────────┐
-       ▼                ▼                ▼
-Popularity          Item-Based          ALS
-Baseline                CF               │
-       │                │                │
-       └────────────────┼────────────────┘
-                        ▼
-                 Recomendaciones
-                        │
-                        ▼
-                     Top 10
-                        │
-                        ▼
-                    Evaluación
-                        │
-                        ▼
-                Selección / análisis
-                        │
-                        ▼
-               Impacto de negocio
+                         DATOS
+                           │
+                           ▼
+                      Snowflake
+                           │
+                           ▼
+                 Carga y preparación
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │ Feature Engineering │
+                └─────────────────────┘
+                           │
+                           ▼
+                    Split temporal
+                       80 % / 20 %
+                    Train      Test
+                       │          │
+                       ▼          │
+          ┌───────────────────────┐
+          │   Generación de       │
+          │   representaciones    │
+          └───────────────────────┘
+             │                │
+             ▼                ▼
+Matriz Cliente × Producto   Matriz Factura × Producto
+             │                │
+       ┌─────┴─────┐          │
+       ▼           ▼          ▼
+  Item-Based      ALS     FP-Growth
+      CF
+       │           │          │
+       └─────┬─────┴──────────┘
+             ▼
+        Recomendaciones
+             │
+             ▼
+        Evaluación técnica
+      Precision / Recall /
+         MAP / Coverage
+             │
+             ▼
+      Simulación de impacto
+          de negocio
+             │
+             ▼
+     Escenarios de viabilidad
+             │
+             ▼
+      train_and_export.py
+             │
+             ▼
+     Artefactos pre-entrenados
+             │
+             ▼
+            FastAPI
+        ┌───────────────┐
+        │               │
+        ▼               ▼
+       ALS          FP-Growth
+        │               │
+        ▼               ▼
+ Recomendaciones     Cross Selling
+ personalizadas
+        │               │
+        └───────┬───────┘
+                ▼
+          Streamlit
 ```
 
 FP-Growth complementa este flujo trabajando a nivel de factura:
@@ -725,6 +763,29 @@ Reglas de asociación
    ↓
 Recomendaciones para Cross Selling
 ```
+
+Los modelos utilizados por la API no se vuelven a entrenar en cada consulta.
+
+```text
+Snowflake
+   ↓
+train_and_export.py
+   ↓
+Modelos + matrices + mappings
+   ↓
+src/api/artifacts/
+   ↓
+FastAPI
+   ↓
+Endpoints
+   ├── /api/recommendations/{customer_id}
+   └── /api/products/{stock_code}/cross-sell
+   ↓
+Recomendaciones
+   ↓
+Streamlit
+```
+
 # 📈 Impacto y Viabilidad de Negocio
 
 Los KPIs definidos buscan estimar el potencial comercial del sistema:
@@ -767,6 +828,71 @@ FP-Growth mostró una coincidencia del **14,14%** en las recomendaciones evaluad
 | Optimista | 75% | €61,74 |
 
 > **Conclusión:** Los resultados sugieren que el sistema presenta **potencial de viabilidad comercial** bajo determinados escenarios de incrementalidad. Estos valores representan una simulación basada en backtesting y no garantizan el cumplimiento real de los KPIs.
+
+# 🚀 API 
+
+La solución expone los modelos de recomendación mediante **FastAPI**. Los modelos se entrenan previamente y sus artefactos se guardan para que la API los cargue en memoria al iniciar, sin volver a conectarse a Snowflake ni entrenar durante cada consulta.
+
+### 🔄 Flujo
+
+```text
+Snowflake
+   ↓
+train_and_export.py
+   ↓
+Artefactos pre-entrenados
+   ↓
+FastAPI
+   ↓
+Recomendaciones
+```
+
+### 🧠 Entrenamiento y artefactos
+
+`train_and_export.py` genera los artefactos de **ALS**, **FP-Growth** y **Popularity Baseline** y los almacena en:
+
+```text
+src/api/artifacts/
+```
+
+Para actualizarlos:
+
+```bash
+python -m src.api.train_and_export
+```
+
+### 📡 Endpoints principales
+
+| Endpoint | Modelo | Función |
+|---|---|---|
+| `GET /api/recommendations/{customer_id}` | **ALS** | Recomendaciones personalizadas para un cliente. |
+| `GET /api/products/{stock_code}/cross-sell` | **FP-Growth** | Productos relacionados para Cross Selling. |
+
+**ALS:** devuelve un Top 10 con `stock_code` y `description`. Si el cliente no existe en el histórico de entrenamiento, se utiliza el **Popularity Baseline** como respaldo.
+
+**FP-Growth:** devuelve hasta 10 productos que suelen aparecer junto al producto consultado. Si no hay suficientes asociaciones, completa el resultado con productos del baseline de popularidad.
+
+### ▶️ Ejecución
+
+Desde la raíz del proyecto:
+
+```bash
+python -m uvicorn src.api.main:app --reload
+```
+
+La API también cuenta con documentación interactiva mediante **Swagger/OpenAPI**.
+
+### 🧩 Estructura
+
+```text
+src/api/
+├── artifacts/
+├── static/
+├── Modelos_top.py
+├── ft_engineering2.py
+├── main.py
+└── train_and_export.py
+```
 
 
 # ⚙️ Instalación
@@ -861,14 +987,14 @@ python -c "import pandas, numpy, scipy, sklearn; print('Entorno configurado corr
 
 # ▶️ Ejecución del Proyecto
 
-En Demo 1, el proyecto se divide principalmente en **EDA, preparación de datos y modelos de recomendación**.
+El proyecto se ejecuta en diferentes etapas: preparación y análisis de datos, entrenamiento y evaluación de los modelos, generación de artefactos y ejecución de la API.
 
 ## 1. Ejecutar el EDA
 
 El análisis exploratorio se encuentra en:
 
 ```text
-EDA_data_set.ipynb
+src/notebooks/EDA_data_set.ipynb
 ```
 
 Para iniciar Jupyter:
@@ -877,15 +1003,13 @@ Para iniciar Jupyter:
 jupyter notebook
 ```
 
-Posteriormente, abrir:
+Posteriormente, abrir el notebook desde Jupyter.
 
-```text
-EDA_data_set.ipynb
-```
+---
 
-## 2. Ejecutar los modelos
+## 2. Ejecutar los modelos y evaluación
 
-Los modelos se encuentran en:
+Los modelos principales se encuentran en:
 
 ```text
 src/Modelos/
@@ -909,73 +1033,112 @@ python src/Modelos/item_based_cf.py
 python src/Modelos/als_model.py
 ```
 
-### Modelos y evaluación conjunta
+### Integración y evaluación conjunta
 
 ```bash
 python src/Modelos/Modelos_juntos.py
 ```
 
-> **Nota:** `Modelos_juntos.py` integra los diferentes enfoques de recomendación y permite realizar la evaluación comparativa definida para Demo 1.
-
-## 3. Dataset utilizado
-
-El dataset limpio se encuentra en:
-
-```text
-src/Data/DataSetLimpio.csv
-```
-
-La ejecución debe realizarse utilizando la estructura de carpetas actual del repositorio y la versión validada del dataset.
-
-## 4. Punto de entrada `main.py`
-
-Durante Demo 1, `main.py` permanece reservado para la integración final de la solución.
-
-Actualmente no contiene la lógica principal de ejecución del sistema. La integración hacia este punto de entrada se realizará en una etapa posterior.
+Este proceso permite comparar los diferentes enfoques mediante **Precision@10, Recall@10, MAP@10 y Coverage@10**.
 
 ---
 
-# 📌 Estado del Proyecto — Demo 1
+## 3. Generar los artefactos para la API
 
-### ✅ Completado
+Antes de ejecutar la API, es necesario generar los modelos y matrices que utilizará el servicio.
 
-- Definición del problema de negocio.
-- Definición del objetivo principal.
-- Definición de KPIs.
-- Análisis exploratorio del dataset.
-- Identificación de problemas de calidad.
-- Limpieza y preparación inicial de los datos.
-- Construcción del dataset de trabajo.
-- Feature Engineering.
-- Construcción de la matriz Cliente × Producto.
-- División temporal Train/Test 80/20.
-- Implementación del Popularity Baseline.
-- Implementación del Item-Based Collaborative Filtering.
-- Implementación del modelo ALS.
-- Implementación de FP-Growth como enfoque de asociación para Cross Selling.
-- Integración de modelos mediante `Modelos_juntos.py`.
-- Evaluación mediante Precision@10, Recall@10, MAP@10 y Coverage@10.
-- Comparación de resultados.
-- Identificación de fortalezas y limitaciones de cada enfoque.
-- Preparación del escenario preliminar de impacto y viabilidad económica.
-- Documentación técnica inicial del proyecto.
+Desde la raíz del proyecto:
 
-### 🔄 Pendiente para las siguientes etapas
+```bash
+python -m src.api.train_and_export
+```
 
-- Validación definitiva del número de registros del dataset limpio.
-- Validación final de resultados y supuestos con el equipo.
-- Ajustes y optimización de los modelos.
-- Integración completa de la solución.
-- Desarrollo de la API.
-- Desarrollo de la interfaz Streamlit.
-- Demo funcional.
-- Despliegue según el alcance final.
-- Validación del impacto comercial mediante datos reales.
-- Consolidación definitiva del escenario económico y ROI.
-- Conclusiones finales y roadmap.
+Este proceso:
 
-> **Alcance Demo 1:** Esta entrega documenta y demuestra la comprensión del negocio, el análisis y preparación de datos y la implementación y evaluación inicial de los modelos de recomendación. Las conclusiones definitivas, el roadmap y la solución final serán incorporados en las siguientes etapas.
+1. Carga los datos desde Snowflake.
+2. Entrena ALS.
+3. Construye la matriz de FP-Growth.
+4. Calcula el baseline de popularidad.
+5. Guarda los artefactos en:
 
+```text
+src/api/artifacts/
+```
+
+Los artefactos se cargan posteriormente en memoria cuando inicia la API.
+
+---
+
+## 4. Ejecutar la API
+
+Desde la raíz del proyecto:
+
+```bash
+python -m uvicorn src.api.main:app --reload
+```
+
+La API expone principalmente:
+
+```text
+GET /api/recommendations/{customer_id}
+GET /api/products/{stock_code}/cross-sell
+```
+
+La documentación interactiva de la API está disponible mediante **Swagger/OpenAPI**.
+
+---
+
+## 5. Ejecutar la simulación de impacto de negocio
+
+Los scripts de evaluación se encuentran en:
+
+```text
+src/evaluation/
+```
+
+### Impacto de ALS
+
+```bash
+python src/evaluation/simulate_als_business_impact.py
+```
+
+### Impacto de FP-Growth
+
+```bash
+python src/evaluation/simulate_fp_growth_business_impact.py
+```
+
+### Simulación combinada de KPIs
+
+```bash
+python src/evaluation/simulate_business_kpis_combined.py
+```
+
+Estos scripts utilizan el backtesting sobre el conjunto `Test` y generan escenarios de viabilidad económica para los KPIs definidos.
+
+Los resultados se almacenan en:
+
+```text
+outputs/business_simulation/
+```
+
+---
+
+## 6. Streamlit
+
+**Streamlit** en desarrollo.
+
+---
+
+## 7. Dataset
+
+La solución utiliza datos cargados desde **Snowflake** para los procesos de entrenamiento y generación de artefactos.
+
+La preparación de datos y la división temporal Train/Test se gestionan mediante los módulos de Feature Engineering correspondientes.
+
+> **Nota:** Para actualizar los modelos utilizados por la API, primero se deben regenerar los artefactos mediante `train_and_export.py` y posteriormente ejecutar nuevamente la API.
+
+---
 # 👥 Equipo
 
 ### DataLab Consulting
