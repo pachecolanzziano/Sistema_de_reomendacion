@@ -1,13 +1,10 @@
 """
 API para visualizar las recomendaciones de ALS y FP-Growth.
 
-Esta versión NO se conecta a Snowflake ni entrena nada: carga los
-artefactos ya entrenados por train_and_export.py (src/api/artifacts/) UNA
-sola vez al arrancar y los sirve desde memoria. Así el contenedor de Docker
-arranca al instante y no necesita credenciales de Snowflake en runtime.
-
-Si aún no generaste los artefactos, corre primero (con acceso a Snowflake):
-    python -m src.api.train_and_export
+Al arrancar, carga los artefactos de src/api/artifacts/ una sola vez y los
+sirve desde memoria. Si falta alguno, ejecuta train_and_export.py para
+generarlos (esto requiere acceso a Snowflake); si ya existen, omite el
+entrenamiento y la API arranca directamente.
 
 Cómo correr la API (desde la raíz del proyecto, la carpeta que contiene `src/`):
     python -m uvicorn src.api.main:app --reload
@@ -27,11 +24,37 @@ from src.api.Modelos_top import recomendar_als, recomendar_fp_growth, recomendar
 import train_and_export
 
 ARTIFACTS_DIR = Path(__file__).resolve().parent / "artifacts"
+ARTIFACT_FILES = (
+    "als_model.npz",
+    "train_matrix.npz",
+    "basket_matrix.npz",
+    "artifacts.pkl",
+)
 
 modelos = {}
 
+
+def ensure_artifacts() -> None:
+    """Genera los artefactos solo cuando falta alguno de los necesarios."""
+    missing_files = [
+        filename for filename in ARTIFACT_FILES if not (ARTIFACTS_DIR / filename).is_file()
+    ]
+    if not missing_files:
+        print("Artefactos existentes detectados; se omite el entrenamiento.")
+        return
+
+    print(
+        "Faltan artefactos pre-entrenados "
+        f"({', '.join(missing_files)}). Ejecutando train_and_export..."
+    )
+    from src.api.train_and_export import main as train_and_export
+
+    train_and_export()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ensure_artifacts()
     print("Cargando artefactos pre-entrenados...")
 
     modelos["als_model"] = AlternatingLeastSquares.load(str(ARTIFACTS_DIR / "als_model.npz"))
