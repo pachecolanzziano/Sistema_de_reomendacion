@@ -21,7 +21,6 @@ from implicit.cpu.als import AlternatingLeastSquares
 from scipy.sparse import load_npz
 
 from src.api.Modelos_top import recomendar_als, recomendar_fp_growth, recomendar_popularidad
-import train_and_export
 
 ARTIFACTS_DIR = Path(__file__).resolve().parent / "artifacts"
 ARTIFACT_FILES = (
@@ -49,7 +48,6 @@ def ensure_artifacts() -> None:
     )
     from src.api.train_and_export import main as train_and_export
 
-    train_and_export()
 
 
 @asynccontextmanager
