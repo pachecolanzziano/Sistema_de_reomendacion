@@ -1060,7 +1060,17 @@ Recomendaciones
 
 Los artefactos generados incluyen modelos, matrices y mappings necesarios para la inferencia.
 
-#### Resultado
+### Integración con MLflow
+
+Se integró **MLflow** para gestionar el ciclo de vida de los modelos de recomendación, permitiendo registrar y realizar seguimiento de los experimentos de entrenamiento.
+
+Durante las ejecuciones se pueden registrar parámetros, métricas y artefactos asociados a los modelos **ALS** y **FP-Growth**, facilitando la trazabilidad, reproducibilidad y comparación entre diferentes ejecuciones.
+
+Además, los modelos entrenados pueden almacenarse como artefactos en MLflow, evitando depender exclusivamente de archivos locales y permitiendo gestionar diferentes versiones del modelo.
+
+El **Model Registry** permite mantener el control sobre las versiones de los modelos y definir cuál debe utilizarse en producción, facilitando la gestión y actualización del sistema de recomendación.
+
+### Resultado
 
 La API permitió separar claramente:
 
@@ -1068,6 +1078,8 @@ La API permitió separar claramente:
 - Persistencia de modelos.
 - Inferencia.
 - Presentación de recomendaciones.
+
+La integración con MLflow añadió trazabilidad y versionado al ciclo de vida de los modelos, fortaleciendo la reproducibilidad y facilitando su gestión en equipo.
 
 Esto preparó la solución para su posterior integración con interfaces y contenedores.
 
@@ -1090,16 +1102,16 @@ Docker se consideró como mecanismo para encapsular:
 - Configuración.
 - Punto de entrada de la aplicación.
 
-La arquitectura de la API fue preparada para utilizar artefactos pre-entrenados, reduciendo la necesidad de mantener conexión con Snowflake durante el runtime.
+### Carga de artefactos en Runtime
+
+La API utiliza el mecanismo `lifespan` de FastAPI para cargar los artefactos pre-entrenados en memoria al iniciar el contenedor:
 
 ```text
-Artefactos pre-entrenados
-        ↓
-     Docker
-        ↓
-      FastAPI
-        ↓
-   Recomendaciones
+src/api/artifacts/
+├── als_model.npz
+├── train_matrix.npz
+├── basket_matrix.npz
+└── artifacts.pkl
 ```
 ---
 
@@ -1187,40 +1199,6 @@ Estas decisiones permitieron que los diferentes componentes evolucionaran de for
 
 Al cierre de esta etapa, el proyecto había evolucionado desde una implementación centrada en el desarrollo y evaluación de modelos hacia una arquitectura integrada.
 
-```text
-                     SNOWFLAKE
-                         │
-                         ▼
-                  Carga de datos
-                         │
-                         ▼
-                 Preparación / ETL
-                         │
-                         ▼
-                  Modelos ML
-                ┌────────┴────────┐
-                ▼                 ▼
-              ALS             FP-Growth
-                │                 │
-                └────────┬────────┘
-                         ▼
-                  Evaluación técnica
-                         │
-                         ▼
-                Impacto de negocio
-                         │
-                         ▼
-                 Artefactos ML
-                         │
-                         ▼
-                      FastAPI
-                         │
-                         ▼
-                    Streamlit
-                         │
-                         ▼
-                      Docker
-```
 
 ### Componentes alcanzados
 
