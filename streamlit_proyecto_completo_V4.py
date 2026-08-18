@@ -183,23 +183,31 @@ st.markdown(
                letter-spacing: 0.15px; }
     .architecture-card { padding: 18px; border-radius: 14px;
                          background: #f8fafc; border: 1px solid #dbeafe;
-                         text-align: center; min-height: 150px; }
+                         color: #0f172a; text-align: center; min-height: 150px; }
+    .architecture-card h1, .architecture-card h2, .architecture-card h3,
+    .architecture-card h4, .architecture-card p { color: #0f172a; }
     .architecture-card h4 { margin-bottom: 8px; }
     .architecture-arrow { display: flex; align-items: center;
                           justify-content: center; font-size: 2rem;
                           color: #2563eb; min-height: 150px; }
     .status-implemented { border-left: 5px solid #16a34a;
                           background: #f0fdf4; padding: 12px 16px;
-                          border-radius: 10px; }
+                          color: #0f172a; border-radius: 10px; }
     .status-integration { border-left: 5px solid #f59e0b;
                           background: #fffbeb; padding: 12px 16px;
-                          border-radius: 10px; }
+                          color: #0f172a; border-radius: 10px; }
     .story { padding: 18px 22px; border-radius: 12px;
              background: #f5f7fb; border-left: 5px solid #2563eb;
-             margin: 12px 0 20px 0; }
+             color: #0f172a; margin: 12px 0 20px 0; }
     .success-story { padding: 18px 22px; border-radius: 12px;
                      background: #f1f8f4; border-left: 5px solid #16a34a;
-                     margin: 12px 0 20px 0; }
+                     color: #0f172a; margin: 12px 0 20px 0; }
+    .status-implemented h1, .status-implemented h2, .status-implemented h3,
+    .status-implemented h4, .status-implemented p, .status-integration h1,
+    .status-integration h2, .status-integration h3, .status-integration h4,
+    .status-integration p, .story h1, .story h2, .story h3, .story h4,
+    .story p, .success-story h1, .success-story h2, .success-story h3,
+    .success-story h4, .success-story p { color: #0f172a; }
     .big-number { font-size: 2.1rem; font-weight: 700; }
     .small-muted { color: #64748b; font-size: 0.9rem; }
     </style>
@@ -221,6 +229,7 @@ def load_eda_data(uploaded_file=None):
         )
 
     paths = [
+        ROOT / "src" / "Data" / "raw" / "online_retail_II.csv",
         ROOT / "src" / "data" / "raw" / "online_retail_II.csv",
         ROOT.parent / "data" / "raw" / "online_retail_II.csv",
         ROOT.parent.parent / "data" / "raw" / "online_retail_II.csv",
@@ -233,7 +242,16 @@ def load_eda_data(uploaded_file=None):
                 encoding="utf-8-sig",
             )
 
-    return None
+    # En Docker el dataset local no se incluye en la imagen para mantenerla
+    # ligera. Cuando no está disponible, se usa la misma fuente Snowflake que
+    # emplean los modelos de recomendación.
+    if MODEL_IMPORT_ERROR is not None or load_raw is None:
+        raise RuntimeError(
+            "No se encontró el CSV local y no fue posible cargar Snowflake: "
+            f"{MODEL_IMPORT_ERROR}"
+        )
+
+    return load_raw()
 
 
 @st.cache_data(show_spinner="Aplicando limpieza del EDA...")
@@ -2155,7 +2173,7 @@ elif seccion == "02 · EDA":
 
         monthly = (
             clean.set_index("InvoiceDate")
-            .resample("M")
+            .resample("ME")
             .agg(
                 Ventas=("Total", "sum"),
                 Facturas=("Invoice", "nunique"),
