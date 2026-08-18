@@ -1091,6 +1091,10 @@ La documentación interactiva de la API está disponible mediante **Swagger/Open
 La imagen ejecuta la API con los artefactos preentrenados incluidos en
 `src/api/artifacts/`; por ello no requiere acceso a Snowflake para iniciar.
 
+El dashboard de Streamlit se ejecuta como un segundo servicio y sí necesita
+una conexión a Snowflake. Mantén las credenciales en el archivo `.env` local;
+Compose las inyecta al contenedor sin incluir ese archivo en la imagen.
+
 Desde la raíz del proyecto:
 
 ```bash
@@ -1101,6 +1105,7 @@ Luego abre:
 
 - API: `http://localhost:8000`
 - Swagger: `http://localhost:8000/docs`
+- Dashboard Streamlit: `http://localhost:8501`
 
 Para detener el servicio:
 
