@@ -1,28 +1,30 @@
 """
 Sistema de recomendación de productos — Online Retail II.
 
-Integra los cuatro modelos del proyecto en un solo archivo:
-  - Popularidad (baseline)
-  - Item-Based Collaborative Filtering
+Integra los dos modelos de mejor desempeño del proyecto en un solo archivo:
   - ALS (factorización matricial, feedback implícito)
   - FP-Growth (cross-sell por co-ocurrencia en factura)
 
-Popularidad, Item-Based CF y ALS comparten el mismo preprocesamiento, que
-sigue viviendo en ft_engineering.py (split temporal 80/20, matriz de
-interacción cliente-item) y se importa desde ahí. FP-Growth usa su propio
+ALS usa el preprocesamiento por cliente que vive en ft_engineering.py (split
+temporal 80/20, matriz de interacción cliente-item). FP-Growth usa su propio
 preprocesamiento porque trabaja a nivel de factura, no de cliente.
 
-Todos los modelos personalizados (CF, ALS) PERMITEN recompras: no se excluyen
-productos que el cliente ya compró antes. En este dataset mayorista la
-recompra es una señal de compra real, no ruido — excluirla perjudicaba
-notablemente las métricas de ambos modelos en las pruebas del proyecto.
+ALS PERMITE recompras: no se excluyen productos que el cliente ya compró
+antes. En este dataset mayorista la recompra es una señal de compra real,
+no ruido — excluirla perjudicaba notablemente las métricas en las pruebas
+del proyecto.
+
+Cada corrida de ALS y de FP-Growth se registra como una corrida de MLflow
+(parámetros + Precision/Recall/MAP/Coverage), en el experimento
+"recomendador-evaluacion". Para verlas: `mlflow ui` desde la raíz del
+proyecto y abrir http://127.0.0.1:5000
 """
 
 import random
 
+import mlflow
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import MultiLabelBinarizer
 from implicit.als import AlternatingLeastSquares
 
@@ -32,6 +34,8 @@ K = 10
 FACTORS = 50
 REGULARIZATION = 0.01
 ITERATIONS = 20
+
+mlflow.set_experiment("recomendador-evaluacion")
 
 
 # ============================================================
@@ -75,81 +79,6 @@ def print_result_block(model_label, precision, recall, map_score, coverage):
 
 
 # ============================================================
-# BASELINE DE POPULARIDAD
-# ============================================================
-
-def top_k_items(train_matrix, k=K):
-    total_qty_per_item = np.asarray(train_matrix.sum(axis=0)).ravel()
-    return np.argsort(-total_qty_per_item)[:k]
-
-
-def run_popularity(train_matrix, test_df, item_map, description_map):
-    popular_items = top_k_items(train_matrix)
-    n_items = train_matrix.shape[1]
-    actuals = test_df.groupby("customer_code")["item_code"].apply(set)
-
-    precisions, recalls, aps = [], [], []
-    for customer_code, actual_items in actuals.items():
-        if customer_code >= train_matrix.shape[0]:
-            continue
-        if train_matrix[customer_code].nnz == 0:
-            continue
-        p = precision_at_k(popular_items, actual_items)
-        if p is not None:
-            precisions.append(p)
-            recalls.append(recall_at_k(popular_items, actual_items))
-            aps.append(average_precision_at_k(popular_items, actual_items))
-
-    coverage = len(set(popular_items)) / n_items
-    names = [description_map.get(item_map[i], item_map[i]) for i in popular_items]
-
-    print_result_block("Popularidad (Top-K)", np.mean(precisions), np.mean(recalls), np.mean(aps), coverage)
-    print(f" Clientes evaluados: {len(precisions)}")
-    print(f" Top {K} productos: {names}")
-
-
-# ============================================================
-# ITEM-BASED CF (permite recompras)
-# ============================================================
-
-def recommend_cf(customer_code, train_matrix, item_similarity, k=K):
-    bought = train_matrix[customer_code].toarray().ravel()
-    scores = bought @ item_similarity
-    top = np.argpartition(scores, -k)[-k:]
-    return top[np.argsort(-scores[top])]
-
-
-def run_item_based_cf(train_matrix, test_df, customer_map, item_map, description_map):
-    item_similarity = cosine_similarity(train_matrix.T, dense_output=True)
-    n_items = train_matrix.shape[1]
-    actuals = test_df.groupby("customer_code")["item_code"].apply(set)
-
-    precisions, recalls, aps, recommended_items = [], [], [], set()
-    example_customer_code, example_recs = None, None
-    for customer_code, actual_items in actuals.items():
-        if customer_code >= train_matrix.shape[0]:
-            continue
-        if train_matrix[customer_code].nnz == 0:
-            continue
-        recs = recommend_cf(customer_code, train_matrix, item_similarity)
-        p = precision_at_k(recs, actual_items)
-        if p is not None:
-            precisions.append(p)
-            recalls.append(recall_at_k(recs, actual_items))
-            aps.append(average_precision_at_k(recs, actual_items))
-        recommended_items.update(recs)
-        if example_customer_code is None and random.random() < 0.05:
-            example_customer_code, example_recs = customer_code, recs
-
-    coverage = len(recommended_items) / n_items
-    print_result_block("Item-Based CF", np.mean(precisions), np.mean(recalls), np.mean(aps), coverage)
-    print(f" Clientes evaluados: {len(precisions)}")
-    if example_customer_code is not None:
-        names = [description_map.get(item_map[i], item_map[i]) for i in example_recs]
-        print(f" Ejemplo, cliente {customer_map[example_customer_code]}: {names}")
-
-
-# ============================================================
 # ALS (permite recompras)
 # ============================================================
 
@@ -190,6 +119,22 @@ def run_als(train_matrix, test_df, customer_map, item_map, description_map):
             example_customer_code, example_recs = customer_code, recs
 
     coverage = len(recommended_items) / n_items
+
+    with mlflow.start_run(run_name="ALS"):
+        mlflow.log_params({
+            "modelo": "ALS",
+            "K": K,
+            "factors": FACTORS,
+            "regularization": REGULARIZATION,
+            "iterations": ITERATIONS,
+        })
+        mlflow.log_metrics({
+            "precision_at_k": float(np.mean(precisions)),
+            "recall_at_k": float(np.mean(recalls)),
+            "map_at_k": float(np.mean(aps)),
+            "coverage_at_k": coverage,
+        })
+
     print_result_block("ALS", np.mean(precisions), np.mean(recalls), np.mean(aps), coverage)
     print(f" Clientes evaluados: {len(precisions)}")
     if example_customer_code is not None:
@@ -246,6 +191,15 @@ def run_fp_growth(test_df, basket_matrix, description_map):
 
     coverage = len(recommended_items) / len(basket_matrix.columns)
 
+    with mlflow.start_run(run_name="FP-Growth"):
+        mlflow.log_params({"modelo": "FP-Growth", "K": K})
+        mlflow.log_metrics({
+            "precision_at_k": float(np.mean(precisions)),
+            "recall_at_k": float(np.mean(recalls)),
+            "map_at_k": float(np.mean(aps)),
+            "coverage_at_k": coverage,
+        })
+
     print_result_block("FP-Growth (StockCode)", np.mean(precisions), np.mean(recalls), np.mean(aps), coverage)
     print(f" Facturas evaluadas: {len(precisions)}")
 
@@ -261,12 +215,9 @@ def run_fp_growth(test_df, basket_matrix, description_map):
 # ============================================================
 
 def main():
-    raw_df = load_raw()  # una sola lectura del csv para los 4 modelos
+    raw_df = load_raw()  # una sola lectura del csv para los 2 modelos
 
     train_matrix, test_df, customer_map, item_map, description_map = get_train_test(raw_df=raw_df)
-
-    run_popularity(train_matrix, test_df, item_map, description_map)
-    run_item_based_cf(train_matrix, test_df, customer_map, item_map, description_map)
     run_als(train_matrix, test_df, customer_map, item_map, description_map)
 
     train_basket_list, fp_test_df, fp_description_map = get_train_test_fpgrowth(raw_df=raw_df)
