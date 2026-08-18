@@ -8,7 +8,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.metrics.pairwise import cosine_similarity
-
+# streamlit run .\streamlit_proyecto_completo_V4.py
 # ============================================================
 # CONFIGURACIÓN
 # ============================================================
@@ -45,7 +45,7 @@ def _find_file(filename):
     for candidate in candidates:
         if candidate.exists():
             return candidate
-
+    print(ROOT)
     src = ROOT / "src"
     if src.exists():
         matches = [
@@ -221,7 +221,7 @@ def load_eda_data(uploaded_file=None):
         )
 
     paths = [
-        ROOT / "data" / "raw" / "online_retail_II.csv",
+        ROOT / "src" / "data" / "raw" / "online_retail_II.csv",
         ROOT.parent / "data" / "raw" / "online_retail_II.csv",
         ROOT.parent.parent / "data" / "raw" / "online_retail_II.csv",
     ]
@@ -769,7 +769,7 @@ def render_funcionamiento_modelo():
 
     st.dataframe(
         model_flow,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
 
@@ -1057,7 +1057,7 @@ API de recomendaciones""",
 
     st.dataframe(
         status,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
 
@@ -1198,7 +1198,7 @@ if seccion == "01 · Problema":
 
     st.dataframe(
         pasos,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
 
@@ -1288,7 +1288,7 @@ elif seccion == "02 · EDA":
 
         st.dataframe(
             info,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
         )
 
@@ -1296,7 +1296,7 @@ elif seccion == "02 · EDA":
 
         st.dataframe(
             raw.head(10),
-            use_container_width=True,
+            width='stretch',
         )
 
     # --------------------------------------------------------
@@ -1336,7 +1336,7 @@ elif seccion == "02 · EDA":
                 missing.style.format(
                     {"% Nulos": "{:.2f}%"}
                 ),
-                use_container_width=True,
+                width='stretch',
                 hide_index=False,
             )
 
@@ -1382,7 +1382,7 @@ elif seccion == "02 · EDA":
 
                 st.plotly_chart(
                     fig,
-                    use_container_width=True,
+                    width='stretch',
                 )
 
             else:
@@ -1538,7 +1538,7 @@ elif seccion == "02 · EDA":
                     "% del dataset": "{:.2f}%",
                 }
             ),
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 "Regla de limpieza": st.column_config.TextColumn(
@@ -1626,7 +1626,7 @@ elif seccion == "02 · EDA":
 
         st.plotly_chart(
             fig_impacto,
-            use_container_width=True,
+            width='stretch',
         )
 
         # ========================================================
@@ -1795,7 +1795,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
         with c2:
@@ -1806,7 +1806,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
     # --------------------------------------------------------
@@ -1861,7 +1861,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
         with c2:
@@ -1909,7 +1909,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
         insight(
@@ -1962,7 +1962,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
         elif analysis == "Productos vs facturación":
@@ -1982,7 +1982,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
         elif analysis == "Países vs facturación":
@@ -2002,7 +2002,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
         elif analysis == "Clientes vs frecuencia":
@@ -2022,7 +2022,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
         elif analysis == "Correlaciones":
@@ -2043,7 +2043,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
         else:
@@ -2093,7 +2093,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
             pairs = []
@@ -2137,7 +2137,7 @@ elif seccion == "02 · EDA":
 
             st.dataframe(
                 pairs,
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
             )
 
@@ -2155,7 +2155,7 @@ elif seccion == "02 · EDA":
 
         monthly = (
             clean.set_index("InvoiceDate")
-            .resample("ME")
+            .resample("M")
             .agg(
                 Ventas=("Total", "sum"),
                 Facturas=("Invoice", "nunique"),
@@ -2200,7 +2200,7 @@ elif seccion == "02 · EDA":
 
         st.plotly_chart(
             fig,
-            use_container_width=True,
+            width='stretch'
         )
 
         days = [
@@ -2226,7 +2226,7 @@ elif seccion == "02 · EDA":
 
         st.plotly_chart(
             fig,
-            use_container_width=True,
+            width='content',
         )
 
         heat = clean.pivot_table(
@@ -2245,7 +2245,7 @@ elif seccion == "02 · EDA":
 
         st.plotly_chart(
             fig,
-            use_container_width=True,
+            width='stretch',
         )
 
     # --------------------------------------------------------
@@ -2318,7 +2318,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
         top_frequency = (
@@ -2342,7 +2342,7 @@ elif seccion == "02 · EDA":
 
             st.plotly_chart(
                 fig,
-                use_container_width=True,
+                width='stretch',
             )
 
         fig = px.scatter(
@@ -2355,7 +2355,7 @@ elif seccion == "02 · EDA":
 
         st.plotly_chart(
             fig,
-            use_container_width=True,
+            width='stretch',
         )
 
         median_sales = customers["Ventas"].median()
@@ -2416,7 +2416,7 @@ elif seccion == "02 · EDA":
 
         st.plotly_chart(
             fig,
-            use_container_width=True,
+            width='stretch',
         )
 
         insight(
@@ -2576,7 +2576,7 @@ elif seccion == "03 · Hallazgos":
 
     st.dataframe(
         bridge,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
 
@@ -2611,7 +2611,7 @@ elif seccion == "04 · Modelos":
 
     st.dataframe(
         models,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
 
@@ -2761,7 +2761,7 @@ elif seccion == "06 · Comparación":
 
     st.dataframe(
         display_metrics,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
 
@@ -2779,7 +2779,7 @@ elif seccion == "06 · Comparación":
 
     st.plotly_chart(
         chart,
-        use_container_width=True,
+        width='stretch',
     )
 
     st.subheader(
@@ -2974,7 +2974,7 @@ elif seccion == "07 · Demo recomendador":
 
                 st.dataframe(
                     table,
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True,
                 )
 
@@ -3062,7 +3062,7 @@ elif seccion == "07 · Demo recomendador":
 
             st.dataframe(
                 table,
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
             )
 
