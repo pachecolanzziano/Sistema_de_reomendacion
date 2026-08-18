@@ -741,3 +741,511 @@ Los principales cambios no surgieron únicamente por agregar modelos, sino por r
 También se amplió la evaluación desde una única métrica de Precision hacia Recall, MAP y Coverage, lo que permite comparar los modelos desde más de una perspectiva.
 
 Finalmente, las pruebas con Firebase comenzaron a mover el proyecto desde un escenario exclusivamente local hacia una estructura que pueda recuperar datos desde servicios externos. Aun quedan decisiones de arquitectura y seguridad por resolver antes de un despliegue definitivo, pero el Sprint deja un pipeline funcional, varios modelos comparables y una lista clara de los obstáculos técnicos que deberán atenderse en las siguientes etapas.
+
+--- 
+# 14. DEMO 2 — Evolución del proyecto
+
+## Documentación general del proceso 
+
+La segunda etapa del proyecto tuvo como objetivo evolucionar desde una solución centrada en el análisis, preparación de datos y evaluación de modelos hacia una arquitectura más integrada, preparada para su disponibilización y posterior despliegue.
+
+A diferencia de la Demo 1, durante esta etapa el flujo de trabajo estuvo más definido y permitió distribuir actividades en paralelo entre los integrantes del equipo. La documentación recoge no solo los avances técnicos, sino también los obstáculos, retrasos, decisiones y soluciones que fueron necesarias para integrar los diferentes componentes.
+
+---
+
+## 14. Sprint 2 — Evolución del proyecto
+
+### 14.1 Objetivos de la Demo 2
+
+Los principales objetivos de esta etapa fueron:
+
+- Consolidar los modelos de recomendación seleccionados.
+- Centralizar el acceso a los datos mediante Snowflake.
+- Mantener una evaluación técnica comparable entre los modelos.
+- Traducir los resultados de los modelos a una simulación de impacto de negocio.
+- Separar el entrenamiento de los modelos de la etapa de inferencia.
+- Desarrollar una API para exponer las recomendaciones.
+- Preparar la solución para una futura interfaz y despliegue mediante contenedores.
+- Mantener trazabilidad de los obstáculos y decisiones tomadas durante la integración.
+
+### Dinámica de trabajo
+
+Debido a que el flujo del proyecto se encontraba más definido, se planteó trabajar en pares o tríos según el tamaño y disponibilidad del equipo:
+
+| Equipo | Enfoque | Resultado esperado |
+|---|---|---|
+| 👥 Par / Trío 1 | Desarrollo de API | Servicio funcional de recomendaciones |
+| 👥 Par / Trío 2 | Evaluación y métricas | Resultados técnicos y de negocio |
+| 👥 Par / Trío 3 | Integración / despliegue | Validación de funcionamiento e integración |
+
+Esta distribución buscó obtener diferentes perspectivas sobre un mismo objetivo, detectar errores con mayor rapidez y comparar resultados antes de consolidar la solución.
+
+```text
+                    TRABAJO EN PARALELO
+                           │
+          ┌────────────────┼────────────────┐
+          ▼                ▼                ▼
+         API          Evaluación       Integración
+          │                │                │
+          └────────────────┼────────────────┘
+                           ▼
+                 Comparación de resultados
+                           │
+                           ▼
+                   Análisis técnico
+                      + negocio
+                           │
+                           ▼
+                   Solución consolidada
+```
+
+---
+
+### 14.2 Estado inicial y planificación
+
+Al inicio de la Demo 2, el proyecto ya contaba con:
+
+- Datos preparados para entrenamiento y evaluación.
+- Modelos desarrollados durante la Demo 1.
+- Procesos de Feature Engineering.
+- Un split temporal Train/Test.
+- Evaluación inicial de los modelos.
+- Una estructura de repositorio susceptible de ser integrada.
+
+A partir de ese punto se definieron varias líneas de trabajo:
+
+```text
+                         DEMO 1
+                            │
+                            ▼
+                    Modelos iniciales
+                            │
+             ┌──────────────┼──────────────┐
+             ▼              ▼              ▼
+            API        Evaluación     Integración
+             │              │              │
+             └──────────────┼──────────────┘
+                            ▼
+                    Solución consolidada
+```
+
+La planificación permitió avanzar simultáneamente en componentes que posteriormente debían conectarse entre sí.
+
+---
+
+### 14.3 Evolución de la arquitectura
+
+Durante la Demo 2, la arquitectura pasó de un escenario principalmente local y experimental a una solución compuesta por diferentes componentes con responsabilidades separadas.
+
+Las responsabilidades se fueron organizando alrededor de:
+
+- Obtención de datos.
+- Preparación y transformación.
+- Entrenamiento.
+- Evaluación.
+- Generación de recomendaciones.
+- Exposición mediante API.
+- Interfaz de usuario.
+- Integración y despliegue.
+
+#### Evolución conceptual
+
+**Demo 1**
+
+```text
+Datos locales
+    ↓
+Preparación
+    ↓
+Modelos
+    ↓
+Evaluación
+```
+
+**Demo 2**
+
+```text
+Snowflake
+    ↓
+Carga de datos
+    ↓
+Preprocesamiento
+    ↓
+Entrenamiento
+    ↓
+Artefactos
+    ↓
+FastAPI
+    ├── ALS
+    └── FP-Growth
+    ↓
+Recomendaciones
+    ↓
+Interfaz / despliegue
+```
+
+Esta separación permitió que los modelos dejaran de ser componentes aislados y pasaran a formar parte de una solución susceptible de ser utilizada por otros componentes del proyecto.
+
+---
+
+### 14.4 Integración de Snowflake
+
+#### Situación inicial
+
+Durante la primera etapa, los modelos trabajaban principalmente a partir de archivos locales con los datos preparados.
+
+Para la Demo 2 se buscó centralizar la fuente de datos para reducir la dependencia de archivos locales y facilitar las etapas posteriores de integración.
+
+#### Cambio implementado
+
+Se incorporó **Snowflake** como fuente de datos para el proceso de modelado.
+
+El flujo de carga consulta la tabla `TRANSACCIONES`, recupera los registros y adapta la información temporal antes de enviarla a los procesos de preparación.
+
+#### Obstáculos encontrados
+
+El cambio de origen implicó adaptar parte del código existente, principalmente por:
+
+- Diferencias en los nombres de columnas.
+- Compatibilidad con las estructuras que esperaban los modelos.
+- Necesidad de mantener el split temporal.
+- Dependencia de credenciales y configuración del entorno.
+- Adaptación de funciones que originalmente trabajaban con archivos locales.
+
+#### Solución
+
+Se centralizó la carga de datos y se mantuvieron funciones de preparación reutilizables, normalizando la estructura recibida para que los modelos pudieran seguir trabajando con una representación consistente.
+
+#### Resultado
+
+Durante las pruebas de la Demo 2 se cargaron aproximadamente **805.243 registros** desde Snowflake. Estos datos se utilizaron para generar los conjuntos Train/Test y las estructuras necesarias para los modelos.
+
+```text
+Snowflake
+    ↓
+TRANSACCIONES
+    ↓
+Carga de datos
+    ↓
+Normalización
+    ↓
+Train / Test
+```
+
+---
+
+### 14.5 Consolidación y evaluación de los modelos
+
+Durante la Demo 2 se consolidó la evaluación de los modelos para facilitar la comparación y seleccionar los enfoques más adecuados para la solución final.
+
+| Modelo | Rol dentro de la solución |
+|---|---|
+| **ALS** | Recomendación personalizada por cliente |
+| **FP-Growth** | Cross Selling basado en productos comprados conjuntamente |
+| **Popularity Baseline** | Referencia y fallback |
+
+La evaluación se estandarizó utilizando:
+
+- `Precision@10`
+- `Recall@10`
+- `MAP@10`
+- `Coverage@10`
+
+En la comparación sobre clientes, ALS presentó el mejor desempeño general en Precision@10, Recall@10 y MAP@10, mientras que FP-Growth aportó un enfoque complementario orientado a Cross Selling.
+
+#### Resultados técnicos principales
+
+| Modelo | Unidad de evaluación | Precision@10 | Recall@10 | MAP@10 | Coverage@10 |
+|---|---|---:|---:|---:|---:|
+| **ALS** | Clientes | **0.1648** | **0.0814** | **0.1000** | 0.2762 |
+| **FP-Growth** | Facturas | **0.1404** | **0.1042** | **0.1098** | **0.4583** |
+
+> **Nota:** ALS y FP-Growth no se comparan directamente como si utilizaran la misma unidad de evaluación. ALS se evalúa sobre clientes y FP-Growth sobre facturas.
+
+---
+
+### 14.6 Simulación de impacto de negocio
+
+Además de la evaluación técnica, durante la Demo 2 se buscó estimar el posible impacto económico de la solución.
+
+Dado que el proyecto es académico y no contempla una validación causal en producción, se utilizó un enfoque de **backtesting + simulación de escenarios**.
+
+```text
+Modelo
+   ↓
+Recomendaciones
+   ↓
+Comportamiento observado en Test
+   ↓
+Valor económico de coincidencias
+   ↓
+Escenarios de incrementalidad
+   ↓
+Viabilidad frente a los KPIs
+```
+
+#### KPI 1 — Ticket promedio
+
+| Indicador | Resultado |
+|---|---:|
+| Ticket actual | **€464,00** |
+| Objetivo +15% | **€533,60** |
+| Incremento requerido | **€69,60 por cliente** |
+
+En ALS se observaron compras posteriores que coincidieron con productos recomendados. Entre los clientes con al menos una coincidencia, el valor observado promedio fue de aproximadamente **€114,99**.
+
+A partir de este valor se construyeron escenarios de sensibilidad:
+
+| Escenario | Incrementalidad simulada | Ticket simulado |
+|---|---:|---:|
+| Conservador | 25% | €492,75 |
+| Base | 50% | €521,50 |
+| Optimista | 75% | **€550,24** |
+| Umbral KPI | **60,53%** | **€533,60** |
+
+El 60,53% representa el nivel de incrementalidad que tendría que asumir la simulación para alcanzar exactamente el objetivo de +15%.
+
+#### KPI 2 — Ventas de productos recomendados
+
+Para FP-Growth se analizaron coincidencias a nivel de factura, obteniendo un valor observado promedio de aproximadamente **€82,32 por factura**.
+
+| Escenario | Incrementalidad simulada | Valor simulado / factura |
+|---|---:|---:|
+| Conservador | 25% | €20,58 |
+| Base | 50% | €41,16 |
+| Optimista | 75% | €61,74 |
+
+> **Importante:** estos valores representan una simulación de viabilidad basada en comportamiento histórico. No constituyen una prueba causal ni garantizan que los KPIs se cumplan en producción.
+
+---
+
+### 14.7 Desarrollo de la API
+
+Una de las principales evoluciones de la Demo 2 fue transformar los modelos en un servicio consumible mediante **FastAPI**.
+
+#### Situación inicial
+
+Los modelos se ejecutaban principalmente dentro del entorno de desarrollo y evaluación. Para avanzar hacia una solución integrada era necesario separar el entrenamiento de la inferencia y ofrecer un punto de acceso para obtener recomendaciones.
+
+#### Cambio implementado
+
+Se desarrolló una API con dos endpoints principales:
+
+| Endpoint | Modelo | Función |
+|---|---|---|
+| `GET /api/recommendations/{customer_id}` | **ALS** | Recomendaciones personalizadas para un cliente |
+| `GET /api/products/{stock_code}/cross-sell` | **FP-Growth** | Productos relacionados para Cross Selling |
+
+ALS genera un Top 10 de recomendaciones personalizadas. Si el cliente no existe en el histórico de entrenamiento, se utiliza el baseline de popularidad como respaldo.
+
+FP-Growth devuelve hasta 10 productos relacionados con el producto consultado y puede completar el resultado con productos populares cuando no existen suficientes asociaciones.
+
+#### Separación entre entrenamiento e inferencia
+
+Para evitar volver a entrenar los modelos o conectarse a Snowflake en cada consulta, se implementó un proceso independiente de exportación:
+
+```text
+Snowflake
+    ↓
+train_and_export.py
+    ↓
+Entrenamiento
+    ↓
+Artefactos
+    ↓
+FastAPI
+    ↓
+Recomendaciones
+```
+
+Los artefactos generados incluyen modelos, matrices y mappings necesarios para la inferencia.
+
+#### Resultado
+
+La API permitió separar claramente:
+
+- Entrenamiento.
+- Persistencia de modelos.
+- Inferencia.
+- Presentación de recomendaciones.
+
+Esto preparó la solución para su posterior integración con interfaces y contenedores.
+
+---
+
+### 14.8 Preparación para Dockerización y despliegue
+
+La siguiente etapa consistió en preparar la solución para ejecutarse de manera reproducible mediante contenedores.
+
+#### Situación inicial
+
+Los diferentes componentes dependían del entorno local utilizado por cada integrante, lo que podía generar diferencias en dependencias y configuración.
+
+#### Enfoque adoptado
+
+Docker se consideró como mecanismo para encapsular:
+
+- Dependencias.
+- Entorno de ejecución.
+- Configuración.
+- Punto de entrada de la aplicación.
+
+La arquitectura de la API fue preparada para utilizar artefactos pre-entrenados, reduciendo la necesidad de mantener conexión con Snowflake durante el runtime.
+
+```text
+Artefactos pre-entrenados
+        ↓
+     Docker
+        ↓
+      FastAPI
+        ↓
+   Recomendaciones
+```
+---
+
+### 14.9 Streamlit
+
+Como complemento de la API, se comenzó a trabajar en una interfaz mediante **Streamlit** con el objetivo de facilitar la interacción con el sistema y presentacion de metricas relevantes para la comprension del negocio.
+
+El flujo esperado es:
+
+```text
+Usuario
+   ↓
+FastAPI
+   ↓
+ALS / FP-Growth
+   ↓
+Recomendación
+   ↓
+Streamlit
+   ↓
+Usuario
+```
+
+La interfaz busca acercar los resultados técnicos a una experiencia más comprensible para la demostración del proyecto.
+
+
+
+---
+
+### 14.10 Retrasos y obstáculos
+
+Durante la Demo 2 se presentaron varios obstáculos que afectaron el ritmo inicialmente planificado.
+
+| Obstáculo | Impacto | Respuesta |
+|---|---|---|
+| Cambio de datos locales a Snowflake | Adaptación de carga y columnas | Centralización y normalización de la carga |
+| Diferencias entre estructuras | Errores de compatibilidad | Estandarización de estructuras |
+| Dependencias del entorno | Problemas de instalación y ejecución | Revisión de `requirements.txt` y entorno |
+| Modelos pensados para evaluación | Dificultad para reutilizarlos en API | Separación entre entrenamiento e inferencia |
+| Cálculo de métricas | Comparaciones incompletas | Estandarización de métricas |
+| Integración entre componentes | Bloqueos entre tareas | Desarrollo y validación progresiva |
+| Preparación para despliegue | Diferencias entre entornos | Preparación de Docker y artefactos |
+
+#### Impacto sobre el flujo
+
+Los retrasos hicieron que el proyecto no avanzara de manera completamente lineal. En distintos momentos fue necesario detener una tarea, revisar una dependencia, aplicar un ajuste y volver a validar antes de continuar.
+
+```text
+Tarea
+  ↓
+Bloqueo / dependencia
+  ↓
+Ajuste técnico
+  ↓
+Validación
+  ↓
+Continuación del flujo
+```
+
+Este comportamiento permitió detectar problemas antes de llegar a la etapa de integración final.
+
+---
+
+### 14.11 Soluciones y decisiones tomadas
+
+Las principales decisiones adoptadas durante la Demo 2 fueron:
+
+- Centralizar la carga de datos en Snowflake.
+- Mantener funciones de preparación reutilizables.
+- Separar el entrenamiento de la inferencia.
+- Persistir los modelos y estructuras necesarias como artefactos.
+- Estandarizar las métricas de evaluación.
+- Mantener ALS como enfoque de recomendación personalizada.
+- Utilizar FP-Growth como enfoque complementario de Cross Selling.
+- Desarrollar la API con FastAPI.
+- Preparar la solución para Docker.
+- Incorporar Streamlit como capa de interacción y presentacion general del proyecto.
+- Validar progresivamente los componentes en lugar de esperar hasta la integración final.
+
+Estas decisiones permitieron que los diferentes componentes evolucionaran de forma independiente y posteriormente pudieran integrarse en una misma solución.
+
+---
+
+### 14.12 Estado final de la Demo 2
+
+Al cierre de esta etapa, el proyecto había evolucionado desde una implementación centrada en el desarrollo y evaluación de modelos hacia una arquitectura integrada.
+
+```text
+                     SNOWFLAKE
+                         │
+                         ▼
+                  Carga de datos
+                         │
+                         ▼
+                 Preparación / ETL
+                         │
+                         ▼
+                  Modelos ML
+                ┌────────┴────────┐
+                ▼                 ▼
+              ALS             FP-Growth
+                │                 │
+                └────────┬────────┘
+                         ▼
+                  Evaluación técnica
+                         │
+                         ▼
+                Impacto de negocio
+                         │
+                         ▼
+                 Artefactos ML
+                         │
+                         ▼
+                      FastAPI
+                         │
+                         ▼
+                    Streamlit
+                         │
+                         ▼
+                      Docker
+```
+
+### Componentes alcanzados
+
+- Fuente de datos centralizada mediante Snowflake.
+- Procesos de preparación y transformación de datos.
+- Modelos de recomendación entrenados y evaluados.
+- Evaluación estandarizada.
+- Simulación de viabilidad de negocio.
+- Artefactos reutilizables para inferencia.
+- API funcional con FastAPI.
+- Endpoints para ALS y FP-Growth.
+- Preparación de la solución para contenedores.
+- Desarrollo de Streamlit para visaulizaciones
+- Consolidación de la estructura del repositorio
+
+---
+
+## 15. Conclusiónes - Demo 2
+
+La Demo 2 representó un avance desde una solución centrada en el desarrollo y evaluación de modelos hacia una solución con componentes conectados entre sí.
+
+El proyecto incorporó una fuente de datos centralizada, consolidó los modelos de recomendación, amplió la evaluación hacia una perspectiva de negocio y añadió una capa de servicio mediante API.
+
+Los principales retrasos estuvieron relacionados con la integración entre componentes, el cambio del origen de datos, la compatibilidad de estructuras, las dependencias del entorno y la adaptación de los modelos para su reutilización fuera del entorno original de entrenamiento.
+
+Estos obstáculos permitieron identificar dependencias críticas y establecer una dinámica de trabajo basada en desarrollo, validación y corrección progresiva.
+
+La documentación de esta etapa complementa el `README.md`: mientras el README describe la solución y su forma de ejecución, este documento registra la **evolución del proyecto, las decisiones tomadas, los obstáculos encontrados y cómo fueron abordados durante el desarrollo**.
