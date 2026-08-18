@@ -1,4 +1,4 @@
-# Imagen de ejecución para la API FastAPI de recomendaciones.
+# Imagen base
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -7,17 +7,24 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# libgomp1 es requerida por `implicit` para ejecutar ALS.
+# Instalar dependencias del sistema (libgomp1 para implicit y supervisor)
 RUN apt-get update \
-    && apt-get install --no-install-recommends -y libgomp1 \
+    && apt-get install --no-install-recommends -y libgomp1 supervisor \
     && rm -rf /var/lib/apt/lists/*
 
+# Copiar e instalar dependencias Python
 COPY requirements.txt ./
 RUN python -m pip install --upgrade pip \
     && pip install -r requirements.txt
 
+# Copiar el código fuente
 COPY . .
 
-EXPOSE 8000
+# Copiar configuración de supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Exponer puertos (FastAPI: 8000, Streamlit: 8501)
+EXPOSE 8000 8501
+
+# Iniciar supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
