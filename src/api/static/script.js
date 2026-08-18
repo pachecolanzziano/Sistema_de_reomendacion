@@ -40,8 +40,8 @@ async function buscarRecomendaciones() {
     // 🔥 Renderizar productos (usando data.recommendations o data si es array)
     const productos = data.recommendations || data;
     if (Array.isArray(productos)) {
-    renderAlsGrid(productos);
-    alsSection.style.display = 'block';
+      renderAlsGrid(productos);
+      alsSection.style.display = 'block';
     } else {
       throw new Error('La respuesta no contiene productos');
     }
