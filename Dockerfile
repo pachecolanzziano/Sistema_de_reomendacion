@@ -22,9 +22,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY requirements-docker.txt .
+<<<<<<< HEAD
 RUN pip install --no-cache-dir -r requirements-docker.txt
 
 # (Aquí continúa el resto de tus copias de archivos hacia abajo...)
+=======
+# Imagen para servir la API de recomendaciones (ALS + FP-Growth + baseline).
+#
+# IMPORTANTE: antes de construir esta imagen, genera los artefactos
+# entrenados corriendo (con acceso a Snowflake, fuera de Docker):
+#      python -m src.api.train_and_export
+# Eso crea src/api/artifacts/ (als_model.npz, train_matrix.npz, artifacts.pkl),
+# que este Dockerfile copia dentro de la imagen. Sin esa carpeta, el
+# contenedor arranca pero falla al buscar los artefactos.
+#
+# Construir (desde la raíz del proyecto, donde está este archivo):
+#      docker build -t recomendador-api .
+# Correr:
+#      docker run -p 8000:8000 recomendador-api
+
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+>>>>>>> 0968ad2 (feat(docker): configuracion completa de dockerfile y requerimientos para la api)
 
 WORKDIR /app
 
@@ -37,8 +59,13 @@ RUN pip install --no-cache-dir -r requirements-docker.txt
 COPY src/api/main.py src/api/Modelos_top.py /app/src/api/
 COPY src/api/static /app/src/api/static
 COPY src/api/artifacts /app/src/api/artifacts
+<<<<<<< HEAD
 COPY src/__init__.py /app/src/__init__.py
 COPY src/api/__init__.py /app/src/api/__init__.py
+=======
+
+RUN mkdir -p /app/src/api && touch /app/src/api/__init__.py
+>>>>>>> 0968ad2 (feat(docker): configuracion completa de dockerfile y requerimientos para la api)
 
 ENV PYTHONPATH=/app
 

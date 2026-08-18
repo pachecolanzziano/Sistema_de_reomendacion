@@ -187,8 +187,3 @@ cython_debug/
 *.key
 snowflake_key
 snowflake_key.*
-
-# === MODELOS Y ARTEFACTOS ===
-api/artifacts/
-*.pkl
-*.npz
