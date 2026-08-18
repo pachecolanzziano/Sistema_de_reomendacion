@@ -22,10 +22,29 @@ async function buscarRecomendaciones() {
     const res = await fetch(`/api/recommendations/${encodeURIComponent(customerId)}`);
     if (!res.ok) throw new Error('Error de servidor');
 
-    const productos = await res.json();
+    const data = await res.json();
+
+    // 🔥 Limpiar mensajes anteriores
     statusMsg.innerHTML = '';
+
+    // 🔥 Mostrar mensaje según el status
+    if (data.status && data.message) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `status ${data.status === 'existing' ? 'success' : 'info'}`;
+      msgDiv.textContent = data.status === 'existing' 
+        ? `👤 Usuario registrado. ${data.message}` 
+        : `🆕 Usuario nuevo. ${data.message}`;
+      statusMsg.appendChild(msgDiv);
+    }
+
+    // 🔥 Renderizar productos (usando data.recommendations o data si es array)
+    const productos = data.recommendations || data;
+    if (Array.isArray(productos)) {
     renderAlsGrid(productos);
     alsSection.style.display = 'block';
+    } else {
+      throw new Error('La respuesta no contiene productos');
+    }
   } catch (err) {
     statusMsg.innerHTML = '<div class="status error">Algo salió mal al buscar las recomendaciones. Intenta de nuevo.</div>';
   } finally {
