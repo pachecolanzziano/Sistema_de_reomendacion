@@ -1086,6 +1086,28 @@ GET /api/products/{stock_code}/cross-sell
 
 La documentación interactiva de la API está disponible mediante **Swagger/OpenAPI**.
 
+## 🐳 Docker
+
+La imagen ejecuta la API con los artefactos preentrenados incluidos en
+`src/api/artifacts/`; por ello no requiere acceso a Snowflake para iniciar.
+
+Desde la raíz del proyecto:
+
+```bash
+docker compose up --build
+```
+
+Luego abre:
+
+- API: `http://localhost:8000`
+- Swagger: `http://localhost:8000/docs`
+
+Para detener el servicio:
+
+```bash
+docker compose down
+```
+
 ---
 
 ## 5. Ejecutar la simulación de impacto de negocio
