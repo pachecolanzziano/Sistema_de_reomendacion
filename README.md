@@ -872,13 +872,48 @@ FastAPI
    └── FP-Growth → Cross Selling
 ```
 ---
+## Escalabilidad de la Solución
+
+El sistema de recomendación está diseñado con principios que permiten escalar desde el volumen actual de aproximadamente **36.000 tickets** hacia conjuntos de datos de mayor tamaño, manteniendo la eficiencia en procesamiento, almacenamiento e inferencia.
+
+### 1. Escalabilidad de Datos
+
+- **Ingesta optimizada con Snowflake:** La integración con **Snowflake** permite centralizar los datos y consultar únicamente la información necesaria para los procesos analíticos, evitando depender exclusivamente de archivos locales y facilitando el crecimiento del volumen de datos.
+
+- **Uso de matrices dispersas (Sparse Matrices):** Los modelos de recomendación trabajan con matrices de interacciones donde la mayoría de los productos no son comprados por cada cliente. Las matrices dispersas permiten almacenar únicamente las interacciones existentes, reduciendo significativamente el consumo de memoria a medida que aumentan los usuarios y productos.
+
+- **Persistencia eficiente:** Las estructuras y artefactos del modelo pueden almacenarse en formatos compactos como `.npz`, permitiendo reducir el espacio requerido y facilitar su carga durante los procesos de inferencia.
+
+### 2. Escalabilidad Algorítmica
+
+- **Algoritmos optimizados:** La solución utiliza algoritmos como **FP-Growth** y **ALS**, diseñados para trabajar eficientemente con grandes volúmenes de interacciones. FP-Growth reduce la necesidad de realizar búsquedas exhaustivas mediante el uso de estructuras como el *FP-Tree*, mientras que ALS aprovecha operaciones de álgebra lineal para trabajar con matrices de interacción.
+
+- **Procesamiento paralelo:** Librerías como `implicit` permiten aprovechar recursos de procesamiento para acelerar las operaciones relacionadas con los modelos de recomendación.
+
+- **Separación entre entrenamiento e inferencia:** El entrenamiento de los modelos puede ejecutarse de forma independiente y fuera de línea. Una vez generados los artefactos necesarios, la API utiliza estos resultados durante la inferencia, evitando realizar procesos de entrenamiento costosos cada vez que un usuario solicita una recomendación.
+
+### 3. Escalabilidad de Infraestructura
+
+La arquitectura también está orientada a soportar un crecimiento en el número de solicitudes. La contenerización con **Docker**, una vez definida e integrada en el despliegue final del proyecto, permitirá estandarizar el entorno de ejecución y facilitar su portabilidad entre diferentes ambientes.
+
+- **Arquitectura Stateless:** La API puede procesar cada solicitud de manera independiente, sin depender de sesiones almacenadas localmente en el contenedor. Esto facilita la creación de múltiples instancias del servicio.
+
+- **Escalabilidad horizontal:** Ante un incremento significativo del tráfico, es posible aumentar el número de instancias de la API en lugar de depender únicamente de una máquina con mayores recursos.
+
+- **Balanceo de carga:** En un escenario de producción, herramientas como un *Load Balancer*, Kubernetes o Docker Swarm pueden distribuir las solicitudes entre diferentes instancias de la API.
+
+- **Tolerancia a fallos:** Una arquitectura basada en múltiples instancias permite reemplazar automáticamente una instancia que presente problemas, reduciendo el impacto sobre la disponibilidad del servicio.
+```
+Estas estrategias permiten que la solución evolucione desde el volumen actual de datos hacia escenarios de mayor escala, manteniendo un uso eficiente de recursos y preparando la arquitectura para futuros escenarios de despliegue en la nube.
+```
+---
 # ⚙️ Instalación
 
 Esta sección permite preparar el proyecto desde cero en un equipo nuevo y reproducir el entorno utilizado durante el desarrollo.
 
 ## 1. Clonar el repositorio
 
-```bash
+```
 git clone https://github.com/pachecolanzziano/Sistema_de_reomendacion.git
 ```
 
