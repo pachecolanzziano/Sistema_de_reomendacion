@@ -2485,7 +2485,7 @@ elif seccion == "02 · EDA":
 
         monthly = (
             clean.set_index("InvoiceDate")
-            .resample("M")
+            .resample("ME")
             .agg(
                 Ventas=("Total", "sum"),
                 Facturas=("Invoice", "nunique"),
@@ -2503,7 +2503,7 @@ elif seccion == "02 · EDA":
             "Mejor mes",
             monthly["Ventas"]
             .idxmax()
-            .strftime("%Y-%m"),
+            .strftime("%Y-%ME"),
         )
 
         c2.metric(
