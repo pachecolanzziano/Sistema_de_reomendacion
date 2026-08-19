@@ -8,7 +8,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.metrics.pairwise import cosine_similarity
-# streamlit run .\streamlit_proyecto_completo_V4.py
+
 # ============================================================
 # CONFIGURACIÓN
 # ============================================================
@@ -45,7 +45,7 @@ def _find_file(filename):
     for candidate in candidates:
         if candidate.exists():
             return candidate
-    print(ROOT)
+
     src = ROOT / "src"
     if src.exists():
         matches = [
@@ -183,31 +183,23 @@ st.markdown(
                letter-spacing: 0.15px; }
     .architecture-card { padding: 18px; border-radius: 14px;
                          background: #f8fafc; border: 1px solid #dbeafe;
-                         color: #0f172a; text-align: center; min-height: 150px; }
-    .architecture-card h1, .architecture-card h2, .architecture-card h3,
-    .architecture-card h4, .architecture-card p { color: #0f172a; }
+                         text-align: center; min-height: 150px; }
     .architecture-card h4 { margin-bottom: 8px; }
     .architecture-arrow { display: flex; align-items: center;
                           justify-content: center; font-size: 2rem;
                           color: #2563eb; min-height: 150px; }
     .status-implemented { border-left: 5px solid #16a34a;
                           background: #f0fdf4; padding: 12px 16px;
-                          color: #0f172a; border-radius: 10px; }
+                          border-radius: 10px; }
     .status-integration { border-left: 5px solid #f59e0b;
                           background: #fffbeb; padding: 12px 16px;
-                          color: #0f172a; border-radius: 10px; }
+                          border-radius: 10px; }
     .story { padding: 18px 22px; border-radius: 12px;
              background: #f5f7fb; border-left: 5px solid #2563eb;
-             color: #0f172a; margin: 12px 0 20px 0; }
+             margin: 12px 0 20px 0; }
     .success-story { padding: 18px 22px; border-radius: 12px;
                      background: #f1f8f4; border-left: 5px solid #16a34a;
-                     color: #0f172a; margin: 12px 0 20px 0; }
-    .status-implemented h1, .status-implemented h2, .status-implemented h3,
-    .status-implemented h4, .status-implemented p, .status-integration h1,
-    .status-integration h2, .status-integration h3, .status-integration h4,
-    .status-integration p, .story h1, .story h2, .story h3, .story h4,
-    .story p, .success-story h1, .success-story h2, .success-story h3,
-    .success-story h4, .success-story p { color: #0f172a; }
+                     margin: 12px 0 20px 0; }
     .big-number { font-size: 2.1rem; font-weight: 700; }
     .small-muted { color: #64748b; font-size: 0.9rem; }
     </style>
@@ -229,8 +221,8 @@ def load_eda_data(uploaded_file=None):
         )
 
     paths = [
-        ROOT / "src" / "Data" / "raw" / "online_retail_II.csv",
         ROOT / "src" / "data" / "raw" / "online_retail_II.csv",
+        ROOT / "data" / "raw" / "online_retail_II.csv",
         ROOT.parent / "data" / "raw" / "online_retail_II.csv",
         ROOT.parent.parent / "data" / "raw" / "online_retail_II.csv",
     ]
@@ -242,16 +234,7 @@ def load_eda_data(uploaded_file=None):
                 encoding="utf-8-sig",
             )
 
-    # En Docker el dataset local no se incluye en la imagen para mantenerla
-    # ligera. Cuando no está disponible, se usa la misma fuente Snowflake que
-    # emplean los modelos de recomendación.
-    if MODEL_IMPORT_ERROR is not None or load_raw is None:
-        raise RuntimeError(
-            "No se encontró el CSV local y no fue posible cargar Snowflake: "
-            f"{MODEL_IMPORT_ERROR}"
-        )
-
-    return load_raw()
+    return None
 
 
 @st.cache_data(show_spinner="Aplicando limpieza del EDA...")
@@ -668,7 +651,321 @@ def render_funcionamiento_modelo():
             unsafe_allow_html=True,
         )
 
+    # --------------------------------------------------------
+    # Flujo técnico: entrenamiento offline + consumo online
+    # --------------------------------------------------------
+
+    st.subheader("⚙️ Flujo técnico del sistema")
+
+    st.markdown(
+        """
+        <div class="story">
+            <h3>🔄 Dos momentos, un mismo motor de recomendación</h3>
+            <p>
+                La solución separa el <strong>entrenamiento offline</strong>,
+                donde se preparan los datos y se generan los artefactos,
+                del <strong>consumo online</strong>, donde la API utiliza
+                esos artefactos para responder las solicitudes del usuario.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # FASE 1
+    st.markdown(
+        """
+        <div style="
+            padding:12px 18px;
+            border-radius:12px;
+            background:#eff6ff;
+            border-left:6px solid #2563eb;
+            margin:10px 0 16px 0;
+        ">
+            <strong>🔵 FASE 1 · ENTRENAMIENTO OFFLINE</strong><br>
+            <span style="color:#64748b;">
+                Se ejecuta cuando se actualizan o reentrenan los modelos.
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    c1, a1, c2, a2, c3 = st.columns([3, 0.7, 3, 0.7, 3])
+
+    with c1:
+        st.markdown(
+            """
+            <div class="architecture-card">
+                <h4>🐍 ft_engineering2.py</h4>
+                <div style="font-size:2rem;">🗄️ → 🧹 → 🧠</div>
+                <p>
+                    Conecta a <strong>Snowflake</strong>, prepara los datos
+                    y entrena los modelos.
+                </p>
+                <hr>
+                <span class="small-muted">
+                    ALS · FP-Growth · Popularidad
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with a1:
+        st.markdown(
+            '<div class="architecture-arrow">→</div>',
+            unsafe_allow_html=True,
+        )
+
+    with c2:
+        st.markdown(
+            """
+            <div class="architecture-card">
+                <h4>⚙️ train_and_export.py</h4>
+                <div style="font-size:2rem;">🔄</div>
+                <p>
+                    Ejecuta el entrenamiento una vez y prepara
+                    los resultados para producción.
+                </p>
+                <hr>
+                <span class="small-muted">
+                    Entrenar → validar → exportar
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with a2:
+        st.markdown(
+            '<div class="architecture-arrow">→</div>',
+            unsafe_allow_html=True,
+        )
+
+    with c3:
+        st.markdown(
+            """
+            <div class="architecture-card">
+                <h4>📦 artifacts/</h4>
+                <div style="font-size:2rem;">💾</div>
+                <p>
+                    Guarda los resultados que serán reutilizados
+                    por la aplicación.
+                </p>
+                <hr>
+                <span class="small-muted">
+                    .npz → matrices / ALS<br>
+                    .pkl → mapas de IDs
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        '<div class="architecture-arrow">↓</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Separador de fases
+    st.markdown(
+        """
+        <div style="
+            border-top:2px dashed #cbd5e1;
+            margin:12px 0 22px 0;
+            position:relative;
+        ">
+            <div style="
+                text-align:center;
+                margin-top:-13px;
+            ">
+                <span style="
+                    background:white;
+                    padding:0 14px;
+                    color:#f97316;
+                    font-weight:700;
+                ">
+                    🟠 FASE 2 · CONSUMO ONLINE
+                </span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.caption(
+        "Cada vez que un usuario solicita una recomendación, "
+        "se utilizan los artefactos previamente generados; "
+        "el modelo no necesita volver a entrenarse."
+    )
+
+    c1, a1, c2 = st.columns([3, 0.7, 3])
+
+    with c1:
+        st.markdown(
+            """
+            <div class="architecture-card">
+                <h4>🚀 main.py</h4>
+                <div style="font-size:2rem;">📦 → 🌐</div>
+                <p>
+                    Carga <strong>artifacts/</strong> al iniciar
+                    y expone la API de recomendaciones.
+                </p>
+                <hr>
+                <span class="small-muted">
+                    Recibe solicitud → ejecuta → responde JSON
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with a1:
+        st.markdown(
+            '<div class="architecture-arrow">→</div>',
+            unsafe_allow_html=True,
+        )
+
+    with c2:
+        st.markdown(
+            """
+            <div class="architecture-card">
+                <h4>🤖 Modelos_top.py</h4>
+                <div style="font-size:2rem;">🧠</div>
+                <p>
+                    Contiene las funciones que generan
+                    las recomendaciones.
+                </p>
+                <hr>
+                <span class="small-muted">
+                    recomendar_als()<br>
+                    recomendar_fp_growth()
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        '<div class="architecture-arrow">↓</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Frontend
+    st.markdown(
+        """
+        <div class="architecture-card" style="
+            max-width:900px;
+            margin:0 auto;
+        ">
+            <h4>🌐 static/</h4>
+            <div style="font-size:2rem;">HTML · CSS · JavaScript</div>
+            <p>
+                Es la capa que ve e interactúa con el usuario.
+            </p>
+            <hr>
+            <span class="small-muted">
+                <strong>index.html</strong> → estructura ·
+                <strong>style.css</strong> → diseño ·
+                <strong>script.js</strong> → interacción y fetch()
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="architecture-arrow">↓</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+        <div style="
+            max-width:650px;
+            margin:0 auto;
+            padding:18px 22px;
+            border-radius:14px;
+            background:#fff7ed;
+            border:1px solid #fed7aa;
+            text-align:center;
+        ">
+            <h4>👤 Navegador del cliente</h4>
+            <div style="font-size:2rem;">🧑‍💻</div>
+            <p>
+                Ingresa <strong>CustomerID</strong>, interactúa con
+                la página y solicita una recomendación.
+            </p>
+            <strong>
+                Solicitud → API → Modelo → JSON → Página
+            </strong>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.divider()
+
+    # Flujo de una solicitud
+    st.subheader("🔁 ¿Qué ocurre cuando el usuario hace clic?")
+
+    request_steps = [
+        ("1", "👤 Usuario", "Ingresa CustomerID o selecciona un producto."),
+        ("2", "📡 JavaScript", "Hace una petición mediante fetch()."),
+        ("3", "⚡ API / main.py", "Recibe la solicitud."),
+        ("4", "🤖 Modelos_top.py", "Ejecuta el recomendador correspondiente."),
+        ("5", "🧠 Modelo", "Calcula y ordena los productos candidatos."),
+        ("6", "📄 JSON", "La API devuelve las recomendaciones."),
+        ("7", "🛒 Frontend", "La página muestra los productos al cliente."),
+    ]
+
+    for number, title, description in request_steps:
+        st.markdown(
+            f"""
+            <div style="
+                display:flex;
+                align-items:center;
+                gap:14px;
+                padding:9px 14px;
+                margin:5px 0;
+                border-radius:10px;
+                background:#f8fafc;
+                border-left:4px solid #2563eb;
+            ">
+                <div style="
+                    min-width:34px;
+                    height:34px;
+                    border-radius:50%;
+                    background:#2563eb;
+                    color:white;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-weight:700;
+                ">{number}</div>
+                <div>
+                    <strong>{title}</strong><br>
+                    <span style="color:#64748b;">
+                        {description}
+                    </span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.info(
+        """
+        **🎯 Concepto clave para la sustentación**
+
+        El entrenamiento es **offline** y puede ser costoso.
+        La recomendación es **online**: la aplicación reutiliza los
+        artefactos ya entrenados para responder rápidamente.
+        Así, el mismo motor puede ser consumido por **Streamlit,
+        una página web u otros sistemas** mediante la API.
+        """
+    )
 
     # --------------------------------------------------------
     # 1. Datos
@@ -2173,7 +2470,7 @@ elif seccion == "02 · EDA":
 
         monthly = (
             clean.set_index("InvoiceDate")
-            .resample("ME")
+            .resample("M")
             .agg(
                 Ventas=("Total", "sum"),
                 Facturas=("Invoice", "nunique"),
@@ -2218,7 +2515,7 @@ elif seccion == "02 · EDA":
 
         st.plotly_chart(
             fig,
-            width='stretch'
+            width='stretch',
         )
 
         days = [
@@ -2244,7 +2541,7 @@ elif seccion == "02 · EDA":
 
         st.plotly_chart(
             fig,
-            width='content',
+            width='stretch',
         )
 
         heat = clean.pivot_table(
