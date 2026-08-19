@@ -1,0 +1,27 @@
+services:
+  api:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+    command:
+      - streamlit
+      - run
+      - streamlit_proyecto_completo_V4.py
+      - --server.address=0.0.0.0
+      - --server.port=8501
+    env_file:
+      - .env
+    environment:
+      OPENBLAS_NUM_THREADS: "1"
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped

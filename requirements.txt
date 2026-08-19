@@ -23,6 +23,7 @@ fastapi>=0.100.0
 uvicorn[standard]>=0.23.0
 joblib>=1.2.0
 cloudpickle>=2.0.0
+pydantic>=2.0.0
 
 # === DASHBOARD ===
 streamlit>=1.28.0
@@ -33,3 +34,4 @@ openpyxl>=3.1.0
 # === FIREBASE / FIRESTORE ===
 firebase-admin>=6.5.0
 python-dotenv>=1.0.0
+snowflake-connector-python>=3.0.0

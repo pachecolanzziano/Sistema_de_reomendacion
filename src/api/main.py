@@ -100,10 +100,19 @@ def get_recommendations(customer_id: str):
         modelos["description_map"],
     )
     if recs is None:
-        recs = recomendar_popularidad(
+        popular_recs = recomendar_popularidad(
             modelos["popularity_top_codes"], modelos["popularity_description_map"]
         )
-    return recs
+        return {
+            "status": "new",
+            "message": "No tenemos historial de este cliente. Te mostramos los productos más populares.",
+            "recommendations": popular_recs
+        }
+    return {
+        "status": "existing",
+        "message": "Recomendaciones personalizadas basadas en tu historial de compras.",
+        "recommendations": recs
+    }
 
 
 @app.get("/api/products/{stock_code}/cross-sell")
