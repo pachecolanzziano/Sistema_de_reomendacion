@@ -11,7 +11,7 @@ Power_BI
 documentacion
 notebooks
 src/notebooks
-src/Data
+# src/Data
 *.ipynb
 .env
 *.log
