@@ -221,7 +221,7 @@ def load_eda_data(uploaded_file=None):
         )
 
     paths = [
-        ROOT / "src" / "data" / "raw" / "online_retail_II.csv",
+        ROOT / "src" / "Data" / "raw" / "online_retail_II.csv",
         ROOT / "data" / "raw" / "online_retail_II.csv",
         ROOT.parent / "data" / "raw" / "online_retail_II.csv",
         ROOT.parent.parent / "data" / "raw" / "online_retail_II.csv",
