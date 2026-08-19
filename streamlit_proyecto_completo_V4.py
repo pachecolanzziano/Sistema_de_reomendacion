@@ -563,6 +563,21 @@ def render_funcionamiento_modelo():
         unsafe_allow_html=True,
     )
 
+    st.subheader("⚙️ Flujo de entrenamiento y consumo de recomendaciones")
+
+    _, diagram_col, _ = st.columns([1, 2, 1])
+    with diagram_col:
+        st.image(
+            ROOT / "src" / "api" / "static" / "diagrama_flujo_modelo.png",
+            caption=(
+                "Flujo desde el entrenamiento en Snowflake hasta las "
+                "recomendaciones mostradas al cliente."
+            ),
+            use_container_width=True,
+        )
+
+    st.divider()
+
     # --------------------------------------------------------
     # Arquitectura visual
     # --------------------------------------------------------
