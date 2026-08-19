@@ -620,6 +620,7 @@ Estas limitaciones deberán considerarse durante la interpretación de resultado
 | **EDA y visualización** | Jupyter Notebook, Matplotlib, Seaborn, Plotly |
 | **Base de Datos** | Snowflake |
 | **API** | FastAPI |
+| **Gestion y trazabilidad de modelos** | MLflow |
 | **Interfaz** | Streamlit |
 | **Control de versiones** | Git, GitHub |
 | **Despliegue / Contenedores** | Docker |
@@ -631,161 +632,33 @@ requirements.txt
 ```
 ---
 
-# 🗂️ Estructura del Proyecto
+# 🗂️ Estructura general del Proyecto
 
 ```text
 Sistema_de_reomendacion/
 │
+├── Power_BI/
+├── documentacion/
+├── notebooks/
 ├── src/
 │   ├── Data/
-│   │   └── DataSetLimpio.csv
-│   │
-│   └── Modelos/
-│       ├── als_model.py
-│       ├── ft_engineering.py
-│       ├── item_based_cf.py
-│       ├── Modelos_juntos.py
-│       └── popularity_baseline.py
+│   ├── Modelos/
+│   ├── api/
+│   ├── data/
+│   ├── evaluation/
+│   ├── notebooks/
+│   └── snowflake/
 │
-├── EDA_data_set.ipynb
-├── requirements.txt
+├── .env
+├── .gitattributes
 ├── .gitignore
-└── README.md
+├── README.md
+├── requirements.txt
+├── EDA_funciones.py
+└── streamlit_proyecto_completo_V4.py
+
 ```
-
-## Función de los principales archivos
-
-| Archivo | Función |
-|---|---|
-| `EDA_data_set.ipynb` | Análisis exploratorio y diagnóstico de calidad de datos. |
-| `src/Data/DataSetLimpio.csv` | Dataset limpio utilizado como base para las etapas de modelado. |
-| `src/Modelos/ft_engineering.py` | Preparación de interacciones, división temporal y construcción de la matriz Cliente × Producto. |
-| `src/Modelos/popularity_baseline.py` | Implementación del baseline basado en popularidad. |
-| `src/Modelos/item_based_cf.py` | Implementación del modelo Item-Based Collaborative Filtering. |
-| `src/Modelos/als_model.py` | Implementación del modelo ALS. |
-| `src/Modelos/Modelos_juntos.py` | Integración y evaluación conjunta de los diferentes enfoques de recomendación. |
-| `src/evaluation/simulate_als_business_impact.py` | Simulación del impacto económico de las recomendaciones generadas por ALS. |
-| `src/evaluation/simulate_fp_growth_business_impact.py` | Simulación del impacto económico de las recomendaciones de Cross Selling generadas por FP-Growth. |
-| `src/evaluation/simulate_business_kpis_combined.py` | Consolidación de los resultados de ALS y FP-Growth para generar escenarios de viabilidad frente a los KPIs de negocio. |
-| `src/api/train_and_export.py` | Entrenamiento y exportación de los artefactos necesarios para ejecutar la API. |
-| `src/api/main.py` | Punto de entrada de la API FastAPI y definición de los endpoints de recomendación. |
-| `src/api/Modelos_top.py` | Funciones de inferencia utilizadas por la API para ALS, FP-Growth y el fallback de popularidad. |
-| `src/api/ft_engineering2.py` | Preparación de datos utilizada por los procesos de entrenamiento y exportación de los modelos de la API. |
-| `src/api/artifacts/` | Almacena los modelos, matrices y mappings pre-entrenados utilizados por la API. |
-| `requirements.txt` | Dependencias necesarias para ejecutar el proyecto. |
-| `README.md` | Documentación general del proyecto. |
-
 ---
-
-# 🔁 Flujo Técnico
-
-```text
-                         DATOS
-                           │
-                           ▼
-                      Snowflake
-                           │
-                           ▼
-                 Carga y preparación
-                           │
-                           ▼
-                ┌─────────────────────┐
-                │ Feature Engineering │
-                └─────────────────────┘
-                           │
-                           ▼
-                    Split temporal
-                       80 % / 20 %
-                    Train      Test
-                       │          │
-                       ▼          │
-          ┌───────────────────────┐
-          │   Generación de       │
-          │   representaciones    │
-          └───────────────────────┘
-             │                │
-             ▼                ▼
-Matriz Cliente × Producto   Matriz Factura × Producto
-             │                │
-       ┌─────┴─────┐          │
-       ▼           ▼          ▼
-  Item-Based      ALS     FP-Growth
-      CF
-       │           │          │
-       └─────┬─────┴──────────┘
-             ▼
-        Recomendaciones
-             │
-             ▼
-        Evaluación técnica
-      Precision / Recall /
-         MAP / Coverage
-             │
-             ▼
-      Simulación de impacto
-          de negocio
-             │
-             ▼
-     Escenarios de viabilidad
-             │
-             ▼
-      train_and_export.py
-             │
-             ▼
-     Artefactos pre-entrenados
-             │
-             ▼
-            FastAPI
-        ┌───────────────┐
-        │               │
-        ▼               ▼
-       ALS          FP-Growth
-        │               │
-        ▼               ▼
- Recomendaciones     Cross Selling
- personalizadas
-        │               │
-        └───────┬───────┘
-                ▼
-          Streamlit
-```
-
-FP-Growth complementa este flujo trabajando a nivel de factura:
-
-```text
-Facturas
-   ↓
-Productos comprados conjuntamente
-   ↓
-FP-Growth
-   ↓
-Reglas de asociación
-   ↓
-Recomendaciones para Cross Selling
-```
-
-Los modelos utilizados por la API no se vuelven a entrenar en cada consulta.
-
-```text
-Snowflake
-   ↓
-train_and_export.py
-   ↓
-Modelos + matrices + mappings
-   ↓
-src/api/artifacts/
-   ↓
-FastAPI
-   ↓
-Endpoints
-   ├── /api/recommendations/{customer_id}
-   └── /api/products/{stock_code}/cross-sell
-   ↓
-Recomendaciones
-   ↓
-Streamlit
-```
-
 # 📈 Impacto y Viabilidad de Negocio
 
 Los KPIs definidos buscan estimar el potencial comercial del sistema:
@@ -871,37 +744,176 @@ python -m src.api.train_and_export
 **ALS:** devuelve un Top 10 con `stock_code` y `description`. Si el cliente no existe en el histórico de entrenamiento, se utiliza el **Popularity Baseline** como respaldo.
 
 **FP-Growth:** devuelve hasta 10 productos que suelen aparecer junto al producto consultado. Si no hay suficientes asociaciones, completa el resultado con productos del baseline de popularidad.
-
+---
 ### ▶️ Ejecución
 
 Desde la raíz del proyecto:
 
-```bash
+```
 python -m uvicorn src.api.main:app --reload
 ```
+### 🧩 Integración con MLflow
 
-La API también cuenta con documentación interactiva mediante **Swagger/OpenAPI**.
+Se integró **MLflow** para gestionar el ciclo de vida de los modelos de recomendación, asegurando su trazabilidad, reproducibilidad y versionado.
 
-### 🧩 Estructura
+Cada entrenamiento de los modelos **ALS** y **FP-Growth** puede registrar:
 
-```text
-src/api/
-├── artifacts/
-├── static/
-├── Modelos_top.py
-├── ft_engineering2.py
-├── main.py
-└── train_and_export.py
+- Hiperparámetros utilizados.
+- Métricas de evaluación.
+- Artefactos generados.
+- Información de la ejecución y fuente de datos.
+
+Esto permite comparar diferentes ejecuciones, identificar el modelo con mejor desempeño y reproducir versiones específicas del recomendador.
+
+Además, los modelos entrenados se almacenan como artefactos en MLflow, evitando depender de archivos locales como `als_model.npz` en los equipos de los integrantes.
+
+El **Model Registry** permite gestionar las diferentes versiones de los modelos y definir cuál debe utilizarse en producción mediante aliases, facilitando el trabajo colaborativo y el despliegue de nuevas versiones.
+
+
+# Streamlit
+
+Se desarrolló una aplicación interactiva en **Streamlit** para integrar y presentar las diferentes etapas del proyecto de recomendación, desde el análisis de datos hasta la generación de recomendaciones.
+
+### Funcionalidades principales
+
+La aplicación permite:
+
+- Explorar y visualizar el EDA.
+- Mostrar el proceso de limpieza y preparación de datos.
+- Presentar los principales hallazgos del análisis.
+- Explicar y comparar los cuatro modelos implementados:
 ```
+- Popularidad (Top-K)
+- Item-Based Collaborative Filtering
+- ALS
+- FP-Growth
+```
+- Comparar los modelos mediante **Precision@10**, **Recall@10**, **MAP@10** y **Coverage@10**.
+- Ejecutar una demo interactiva del sistema de recomendación.
+- Generar recomendaciones personalizadas por cliente.
+- Generar recomendaciones de productos asociados mediante FP-Growth.
+
+### Flujo de la aplicación
+```text
+Datos
+  ↓
+Limpieza y Feature Engineering
+  ↓
+EDA y Hallazgos
+  ↓
+Modelos de recomendación
+  ↓
+Evaluación
+  ↓
+Demo interactiva
+  ↓
+Recomendaciones
+```
+### Integración de la solución
+
+Streamlit funciona como la capa de **visualización y demostración** del proyecto. La arquitectura contempla además:
+- **Snowflake:** almacenamiento y consulta de datos.
+- **Python:** procesamiento y entrenamiento.
+- **FastAPI:** exposición de las recomendaciones mediante API.
+- **Docker:** empaquetado y despliegue.
+- **Web / E-commerce / CRM:** posibles consumidores de las recomendaciones. 
+
+De esta manera, la aplicación demuestra el recorrido completo **del dato al modelo y del modelo a una recomendación accionable para el negocio.**
 
 
+# 🐳 Docker - Despliegue y Contenerización
+
+La solución fue preparada para ejecutarse en un entorno aislado mediante **Docker**, buscando garantizar reproducibilidad, modularidad y un entorno consistente para la API de recomendaciones.
+
+### Arquitectura del contenedor
+
+La imagen utiliza una base ligera de **Python 3.11-slim** y encapsula los componentes necesarios para ejecutar la API, incluyendo las dependencias de computación numérica y los artefactos de Machine Learning.
+
+La contenerización permite separar el entorno de ejecución de la máquina local y desacoplar los artefactos de los procesos de ingesta y entrenamiento.
+
+### Optimización de recursos
+
+El archivo `.dockerignore` excluye elementos que no son necesarios para ejecutar el servicio, como:
+
+- Entornos virtuales.
+- Notebooks de Jupyter.
+- Archivos de desarrollo local.
+- Archivos de control de versiones.
+- Directorios y recursos no requeridos por la API.
+
+Esto permite mantener una imagen más ligera y reducir el contexto utilizado durante `docker build`.
+
+### Carga de artefactos en Runtime
+
+La API utiliza el mecanismo `lifespan` de FastAPI para cargar los artefactos pre-entrenados en memoria al iniciar el contenedor:
+
+```
+src/api/artifacts/
+├── als_model.npz
+├── train_matrix.npz
+├── basket_matrix.npz
+└── artifacts.pkl
+```
+### Ejecución del contenedor
+Desde la raíz del proyecto, primero se construye la imagen:
+```
+docker build -t recomendador-api .
+```
+Posteriormente se inicia el contenedor exponiendo el puerto `8000:`
+```
+docker run -p 8000:8000 recomendador-api
+```
+Una vez iniciado, el servicio queda disponible para atender las solicitudes de la API.
+```
+Docker
+   ↓
+FastAPI
+   ├── ALS → Recomendaciones personalizadas
+   └── FP-Growth → Cross Selling
+```
+---
+## Escalabilidad de la Solución
+
+El sistema de recomendación está diseñado con principios que permiten escalar desde el volumen actual de aproximadamente **36.000 tickets** hacia conjuntos de datos de mayor tamaño, manteniendo la eficiencia en procesamiento, almacenamiento e inferencia.
+
+### 1. Escalabilidad de Datos
+
+- **Ingesta optimizada con Snowflake:** La integración con **Snowflake** permite centralizar los datos y consultar únicamente la información necesaria para los procesos analíticos, evitando depender exclusivamente de archivos locales y facilitando el crecimiento del volumen de datos.
+
+- **Uso de matrices dispersas (Sparse Matrices):** Los modelos de recomendación trabajan con matrices de interacciones donde la mayoría de los productos no son comprados por cada cliente. Las matrices dispersas permiten almacenar únicamente las interacciones existentes, reduciendo significativamente el consumo de memoria a medida que aumentan los usuarios y productos.
+
+- **Persistencia eficiente:** Las estructuras y artefactos del modelo pueden almacenarse en formatos compactos como `.npz`, permitiendo reducir el espacio requerido y facilitar su carga durante los procesos de inferencia.
+
+### 2. Escalabilidad Algorítmica
+
+- **Algoritmos optimizados:** La solución utiliza algoritmos como **FP-Growth** y **ALS**, diseñados para trabajar eficientemente con grandes volúmenes de interacciones. FP-Growth reduce la necesidad de realizar búsquedas exhaustivas mediante el uso de estructuras como el *FP-Tree*, mientras que ALS aprovecha operaciones de álgebra lineal para trabajar con matrices de interacción.
+
+- **Procesamiento paralelo:** Librerías como `implicit` permiten aprovechar recursos de procesamiento para acelerar las operaciones relacionadas con los modelos de recomendación.
+
+- **Separación entre entrenamiento e inferencia:** El entrenamiento de los modelos puede ejecutarse de forma independiente y fuera de línea. Una vez generados los artefactos necesarios, la API utiliza estos resultados durante la inferencia, evitando realizar procesos de entrenamiento costosos cada vez que un usuario solicita una recomendación.
+
+### 3. Escalabilidad de Infraestructura
+
+La arquitectura también está orientada a soportar un crecimiento en el número de solicitudes. La contenerización con **Docker**, una vez definida e integrada en el despliegue final del proyecto, permitirá estandarizar el entorno de ejecución y facilitar su portabilidad entre diferentes ambientes.
+
+- **Arquitectura Stateless:** La API puede procesar cada solicitud de manera independiente, sin depender de sesiones almacenadas localmente en el contenedor. Esto facilita la creación de múltiples instancias del servicio.
+
+- **Escalabilidad horizontal:** Ante un incremento significativo del tráfico, es posible aumentar el número de instancias de la API en lugar de depender únicamente de una máquina con mayores recursos.
+
+- **Balanceo de carga:** En un escenario de producción, herramientas como un *Load Balancer*, Kubernetes o Docker Swarm pueden distribuir las solicitudes entre diferentes instancias de la API.
+
+- **Tolerancia a fallos:** Una arquitectura basada en múltiples instancias permite reemplazar automáticamente una instancia que presente problemas, reduciendo el impacto sobre la disponibilidad del servicio.
+```
+Estas estrategias permiten que la solución evolucione desde el volumen actual de datos hacia escenarios de mayor escala, manteniendo un uso eficiente de recursos y preparando la arquitectura para futuros escenarios de despliegue en la nube.
+```
+---
 # ⚙️ Instalación
 
 Esta sección permite preparar el proyecto desde cero en un equipo nuevo y reproducir el entorno utilizado durante el desarrollo.
 
 ## 1. Clonar el repositorio
 
-```bash
+```
 git clone https://github.com/pachecolanzziano/Sistema_de_reomendacion.git
 ```
 
@@ -1086,33 +1098,6 @@ GET /api/products/{stock_code}/cross-sell
 
 La documentación interactiva de la API está disponible mediante **Swagger/OpenAPI**.
 
-## 🐳 Docker
-
-La imagen ejecuta la API con los artefactos preentrenados incluidos en
-`src/api/artifacts/`; por ello no requiere acceso a Snowflake para iniciar.
-
-El dashboard de Streamlit se ejecuta como un segundo servicio y sí necesita
-una conexión a Snowflake. Mantén las credenciales en el archivo `.env` local;
-Compose las inyecta al contenedor sin incluir ese archivo en la imagen.
-
-Desde la raíz del proyecto:
-
-```bash
-docker compose up --build
-```
-
-Luego abre:
-
-- API: `http://localhost:8000`
-- Swagger: `http://localhost:8000/docs`
-- Dashboard Streamlit: `http://localhost:8501`
-
-Para detener el servicio:
-
-```bash
-docker compose down
-```
-
 ---
 
 ## 5. Ejecutar la simulación de impacto de negocio
@@ -1153,18 +1138,40 @@ outputs/business_simulation/
 
 ## 6. Streamlit
 
-**Streamlit** en desarrollo.
+Desde la raíz del proyecto, ejecutar:
 
+```
+streamlit run streamlit_proyecto_completo_v4.py
+```
 ---
 
-## 7. Dataset
+## 7. Docker - Ejecución de contenerización
 
-La solución utiliza datos cargados desde **Snowflake** para los procesos de entrenamiento y generación de artefactos.
+Docker permite ejecutar la solución en un entorno aislado y reproducible.
 
-La preparación de datos y la división temporal Train/Test se gestionan mediante los módulos de Feature Engineering correspondientes.
+### Construir la imagen
 
-> **Nota:** Para actualizar los modelos utilizados por la API, primero se deben regenerar los artefactos mediante `train_and_export.py` y posteriormente ejecutar nuevamente la API.
+```
+docker build -t recomendador-api 
+```
+### Ejecutar el contenedor
+```
+docker run -p 8000:8000 recomendador-api
+```
+Una vez iniciado, la API queda disponible en el puerto `8000`
+---
+---
+# ✅ Conclusiones
 
+El proyecto permitió desarrollar una solución de recomendación de productos basada en el historial transaccional, evolucionando desde el análisis y modelado inicial hacia una arquitectura integrada.
+
+Los resultados mostraron que **ALS** presenta el mejor desempeño general entre los modelos evaluados a nivel cliente, mientras que **FP-Growth** aporta un enfoque complementario para estrategias de **Cross Selling**.
+
+Además de la evaluación técnica, se realizó una **simulación de viabilidad de negocio** para estimar el potencial de impacto sobre los KPIs definidos. Estos resultados representan escenarios de simulación y no una validación causal del impacto comercial.
+
+Actualmente, la solución cuenta con los procesos de datos, modelos de recomendación, evaluación, simulación de negocio y una **API funcional mediante FastAPI**. La interfaz **Streamlit** y la consolidación del despliegue mediante **Docker** forman parte de la evolución final de la solución.
+
+> **En conjunto, el proyecto establece una base técnica y de negocio para una futura implementación de un sistema de recomendación en un entorno real de E-Commerce.**
 ---
 # 👥 Equipo
 
